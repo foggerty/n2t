@@ -1,0 +1,29 @@
+#+OPTIONS: toc:nil
+
+* Readme                                                             
+:PROPERTIES:
+:EXPORT_FILE_NAME: README.md
+:END:
+
+A collection of tools for the [[http://nand2tetris.org/][Nand2Tetris project.]]
+
+** Lexer
+I'm going with a fully fledged parser for the initial Assembler project, so it can be reused in the compiler project.
+
+** Assembler
+Basic assembler that maps symbols/tokens to machine instructions.  Output is a text file with "binary" values written out as string; internally they're all going to be represented by 16 bit constants that are then OR'd together and converted to a string representation at the end.
+
+** Parser
+TBD
+
+** Compiler
+TBD
+
+* Lexer
+TDB
+* Assembler
+TBD
+* Parser
+TBD
+* Compiler
+TBD
