@@ -1,10 +1,7 @@
 #+OPTIONS: toc:nil
 
-* Readme                                                             
-:PROPERTIES:
-:EXPORT_FILE_NAME: README.md
-:END:
 
+* Readme
 A collection of tools for the [[http://nand2tetris.org/][Nand2Tetris project.]]
 
 ** Lexer
@@ -20,7 +17,15 @@ TBD
 TBD
 
 * Lexer
-TDB
+
+ - [X] Wrapper around a hash table for the symbol table.  Don't worry about where stuff is located for now, just one file.
+ - [X] Look into Go best practices for organising packages, and reorganise :-)
+ - [ ] Find out how the documentation package works, so can document code accordingly
+ - [ ] Read up on tests and write some for has table - can I get these running from Emacs?
+ - [ ] Code to strip all white space (other than carriage returns)/comments
+ - [ ] Work out if everything that I've made public actually needs to be.  i.e. AsmInstruct isn't useful if you're just making an assembler, giving it a text file and expecting instructib
+ - [ ] go through the names.  Kinda not great, plus prob over complicating things
+
 * Assembler
 TBD
 * Parser
