@@ -1,5 +1,7 @@
 #+OPTIONS: toc:nil
 
+* To-Do
+- [ ] Get this org file to export the README section every time it's saved.
 
 * Readme
 A collection of tools for the [[http://nand2tetris.org/][Nand2Tetris project.]]
