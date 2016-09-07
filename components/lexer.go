@@ -1,12 +1,16 @@
+/*
+
+Package components has all of the components requires for both the
+assembler and compiler that are written for the Nand2Tetris course
+(http://nand2tetris.org/)
+
+Idea blatantly stolen from Rob Pike's talk here: https://www.youtube.com/watch?v=HxaD_trXwRE
+
+I've never written a lexer/parser before, and I'm also learning Go
+while I do so.  Should be fun :-)
+
+*/
 package components
-
-// Taken form Rob Pike's talk here: https://www.youtube.com/watch?v=HxaD_trXwRE
-
-// To-do: how much of this can be factored out, so that it can be
-// reused with the compiler?  The run loop is obvious, as well as
-// EOF/EOL tests etc.  But can I maybe update it to take a lookup
-// table of strings => types?  For reserved words, yes, but variables
-// etc, arithmetic statements, probably not.
 
 import (
 	"errors"
@@ -15,16 +19,26 @@ import (
 	"unicode/utf8"
 )
 
+// StateFunction represents the lexer's current 'state'.  i.e. are we
+// at the beginning of an A-instruction, a label or a C-Instruction.
 type StateFunction func(*Lexer) StateFunction
 
+// Lexer tracks the progress as the lexer process moves through the
+// input string.
 type Lexer struct {
 	input string         // entire source file, not bothering with streaming (for now)
 	start int            // start of current item in bytes, NOT characters
 	pos   int            // the position as we search along/end of current item
-	width int            // number of runes between pos-start
+	width int            // width of last rune that was read
 	items chan AsmLexine // channel on which to pass back the tokens
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Public
+
+// NewLexer returns both a lexer structure, and its output channel, on
+// which 'lexenes' (is that an actual word?) get passed as they are
+// read.
 func NewLexer(input string) (*Lexer, chan AsmLexine) {
 	l := &Lexer{
 		input: input,
@@ -35,8 +49,9 @@ func NewLexer(input string) (*Lexer, chan AsmLexine) {
 	return l, l.items
 }
 
+// Run starts the lexer process.
 func (l *Lexer) Run() {
-	state := l.skipWhitespace()
+	state := skipWhitespace(l)
 
 	for state != nil {
 		state = state(l)
@@ -45,43 +60,46 @@ func (l *Lexer) Run() {
 	close(l.items)
 }
 
-// only run when we've gotten to the end of a recognisable token.
-func (l *Lexer) emit(t AsmInstruction) {
-	l.items <- AsmLexine{
-		Instruction: t,
-		Value:       l.input[l.start:l.pos]}
+////////////////////////////////////////////////////////////////////////////////
+// helper routines
 
+// acceptUntil will keep moving through the input string until either
+// on of the inValid characters is reached, or white-space or EOL/EOF
+// are reached.
+func (l *Lexer) acceptUntil(inValid string) {
+	for {
+		next := l.nextRune()
+
+		isInvalid := strings.IndexRune(inValid, next) >= 0
+		isWhiteSpace := isWhiteSpace(next)
+
+		if isInvalid || isWhiteSpace || l.atEof() {
+			l.rewind()
+			break
+		}
+	}
+}
+
+// ignore moves the start position up to the current 'read' thingie.
+// Used if we want to throw away what we've just traversed (comments
+// etc).
+func (l *Lexer) ignore() {
 	l.start = l.pos
 }
 
-func (l *Lexer) startOfToken() StateFunction {
-	// get to end of next token...
-	// figure out what we got?
-	// emit
-	return nil
+// emit will thrown the value of pos-start from input onto the output
+// channel
+func (l *Lexer) emit(aI AsmInstruction) {
+	l.items <- AsmLexine{
+		Instruction: aI,
+		Value:       l.input[l.start:l.pos]}
+
+	l.start = l.pos
+	l.width = 0
 }
 
-// Skips white space and comments
-func (l *Lexer) skipWhitespace() StateFunction {
-	for {
-		l.skipSpaces()
-
-		if !l.atBeginComment() {
-			break
-		}
-
-		for l.atBeginComment() {
-			l.movePastEol()
-		}
-	}
-
-	if l.atEof() {
-		return nil
-	}
-
-	return nil
-}
-
+// skipSpaces moves both pos ad start forward until it hits a non
+// white-space character.
 func (l *Lexer) skipSpaces() {
 	for {
 		next := string(l.nextRune())
@@ -91,31 +109,58 @@ func (l *Lexer) skipSpaces() {
 			break
 		}
 
-		l.start = l.pos
+		l.ignore()
 	}
 }
 
-// Returns the next rune, and moves pos forward over it
+// isWhiteSpace returns true if the provided rune is a space, tab or
+// newline.
+func isWhiteSpace(r rune) bool {
+	test := string(r)
+
+	return test != " " &&
+		test != "\t" &&
+		test != "\n"
+}
+
+// peek peeks at the next rune, without advancing through the string.
+func (l *Lexer) peek() rune {
+	result := l.nextRune()
+	l.rewind()
+
+	return result
+}
+
+// nextRune returns the next rune in input, moving forward.
 func (l *Lexer) nextRune() rune {
-	next, width := utf8.DecodeRuneInString(l.input[l.start:])
+	rune, width := utf8.DecodeRuneInString(l.input[l.pos:])
+
 	l.pos += width
+	l.width = width
 
-	if next == utf8.RuneError {
-		msg := fmt.Sprintf("Unrecognisable UTF8 char at byte %d", l.start)
-		panic(msg)
-	}
-
-	return next
+	return rune
 }
 
+// error - I should use this method...
+func (l *Lexer) error(msg string, args ...interface{}) StateFunction {
+	l.items <- AsmLexine{
+		Instruction: asmERROR,
+		Value:       fmt.Sprintf(msg, args)}
+
+	return nil
+}
+
+// atEof ....  Pretty sure you can figure this one out.
 func (l *Lexer) atEof() bool {
 	return l.start == len(l.input)
 }
 
+// rewind moves back to the previous rune.
 func (l *Lexer) rewind() {
-	l.pos = l.start
+	l.pos -= l.width
 }
 
+// RewindTo rewinds NOTH pos and start to a set location.
 func (l *Lexer) RewindTo(p int) error {
 	if p < l.start {
 		return errors.New("Attempted to rewind past start")
@@ -138,7 +183,7 @@ func (l *Lexer) atBeginComment() bool {
 	first := string(l.nextRune())
 
 	if first != "/" || l.atEof() {
-		l.RewindTo(initialPos)
+		l.rewind()
 		return false
 	}
 
@@ -159,6 +204,108 @@ func (l *Lexer) movePastEol() {
 		return
 	}
 
+	// make sure that \n isn't the very last character
+	if i == len(l.input) {
+		i -= 1
+	}
+
 	l.start = i + 1
 	l.pos = i + 1
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// State functions
+
+// General "move forward until we find something useful" function.
+func skipWhitespace(l *Lexer) StateFunction {
+	for {
+		l.skipSpaces()
+
+		if !l.atBeginComment() {
+			break
+		}
+
+		for l.atBeginComment() {
+			l.movePastEol()
+		}
+	}
+
+	if l.atEof() {
+		return nil
+	}
+
+	next := string(l.peek())
+
+	if next == "@" {
+		return aInstruction
+	}
+
+	if next == "(" {
+		return atLabel
+	}
+
+	return cInstruction
+}
+
+// Handles A-instructions (@123 /@loop)
+func aInstruction(l *Lexer) StateFunction {
+	l.acceptUntil("\t\n ")
+	l.emit(asmAINSTRUCT)
+
+	return skipWhitespace
+}
+
+// Handles labels (i.e. (LOOP))
+func atLabel(l *Lexer) StateFunction {
+	l.acceptUntil(")\n")
+	l.emit(asmLABEL)
+
+	return skipWhitespace
+}
+
+// Handles C-Instructions.
+// Note that there are four ways this can be represented:
+//
+//    d=c;j
+//    d=c
+//    c;j
+//    c
+//
+// this will figure out in which situation we're in, and set the next
+// state accordingly.
+func cInstruction(l *Lexer) StateFunction {
+	l.acceptUntil("=;")
+	next := string(l.peek())
+
+	// destination part of d=c;j
+	if next == "=" {
+		l.emit(asmDEST)
+		return atCmp
+	}
+
+	// comp part of c;j
+	if next == ";" {
+		l.emit(asmCOMP)
+		return atJmp
+	}
+
+	// comp only (legal, but doesn't really achieve anything)
+	l.emit(asmCOMP)
+	return skipWhitespace
+}
+
+// Handles the 'c' part of a C-Instruction (d=c;j)
+func atCmp(l *Lexer) StateFunction {
+	l.acceptUntil(";")
+	l.emit(asmCOMP)
+
+	return atJmp
+}
+
+// Handles the 'j' part of a C-Instruction
+func atJmp(l *Lexer) StateFunction {
+	l.acceptUntil("")
+	l.emit(asmJUMP)
+
+	return skipWhitespace
 }

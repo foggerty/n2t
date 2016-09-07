@@ -12,7 +12,9 @@ const (
 	asmDEST                            // dest part of a c-instruction
 	asmCOMP                            // comp part of a c-instruction
 	asmJUMP                            // jump part of a c-instruction
+	asmEOL                             // end of line, marks end of instruction
 	asmEOF                             // end of file
+	asmERROR                           // something went horribly wrong
 )
 
 type AsmLexine struct {
