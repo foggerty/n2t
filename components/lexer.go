@@ -4,7 +4,8 @@ Package components has all of the components requires for both the
 assembler and compiler that are written for the Nand2Tetris course
 (http://nand2tetris.org/)
 
-Idea blatantly stolen from Rob Pike's talk here: https://www.youtube.com/watch?v=HxaD_trXwRE
+Idea blatantly stolen from Rob Pike's talk here:
+https://www.youtube.com/watch?v=HxaD_trXwRE
 
 I've never written a lexer/parser before, and I'm also learning Go
 while I do so.  Should be fun :-)
@@ -19,9 +20,12 @@ import (
 	"unicode/utf8"
 )
 
+////////////////////////////////////////////////////////////////////////////////
+// Public
+
 // StateFunction represents the lexer's current 'state'.  i.e. are we
 // at the beginning of an A-instruction, a label or a C-Instruction.
-type StateFunction func(*Lexer) StateFunction
+type stateFunction func(*Lexer) stateFunction
 
 // Lexer tracks the progress as the lexer process moves through the
 // input string.
@@ -30,19 +34,16 @@ type Lexer struct {
 	start int            // start of current item in bytes, NOT characters
 	pos   int            // the position as we search along/end of current item
 	width int            // width of last rune that was read
-	items chan AsmLexine // channel on which to pass back the tokens
+	items chan Asmlexine // channel on which to pass back the tokens
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Public
 
 // NewLexer returns both a lexer structure, and its output channel, on
 // which 'lexenes' (is that an actual word?) get passed as they are
 // read.
-func NewLexer(input string) (*Lexer, chan AsmLexine) {
+func NewLexer(input string) (*Lexer, chan Asmlexine) {
 	l := &Lexer{
 		input: input,
-		items: make(chan AsmLexine)}
+		items: make(chan Asmlexine)}
 
 	go l.Run()
 
@@ -89,8 +90,8 @@ func (l *Lexer) ignore() {
 
 // emit will thrown the value of pos-start from input onto the output
 // channel
-func (l *Lexer) emit(aI AsmInstruction) {
-	l.items <- AsmLexine{
+func (l *Lexer) emit(aI asmInstruction) {
+	l.items <- Asmlexine{
 		Instruction: aI,
 		Value:       l.input[l.start:l.pos]}
 
@@ -142,8 +143,8 @@ func (l *Lexer) nextRune() rune {
 }
 
 // error - I should use this method...
-func (l *Lexer) error(msg string, args ...interface{}) StateFunction {
-	l.items <- AsmLexine{
+func (l *Lexer) error(msg string, args ...interface{}) stateFunction {
+	l.items <- Asmlexine{
 		Instruction: asmERROR,
 		Value:       fmt.Sprintf(msg, args)}
 
@@ -160,8 +161,8 @@ func (l *Lexer) rewind() {
 	l.pos -= l.width
 }
 
-// RewindTo rewinds NOTH pos and start to a set location.
-func (l *Lexer) RewindTo(p int) error {
+// RewindTo rewinds BOTH pos and start to a set location.
+func (l *Lexer) rewindTo(p int) error {
 	if p < l.start {
 		return errors.New("Attempted to rewind past start")
 	}
@@ -188,7 +189,7 @@ func (l *Lexer) atBeginComment() bool {
 	}
 
 	second := string(l.nextRune())
-	l.RewindTo(initialPos)
+	l.rewindTo(initialPos)
 
 	return second == "/"
 }
@@ -217,7 +218,7 @@ func (l *Lexer) movePastEol() {
 // State functions
 
 // General "move forward until we find something useful" function.
-func skipWhitespace(l *Lexer) StateFunction {
+func skipWhitespace(l *Lexer) stateFunction {
 	for {
 		l.skipSpaces()
 
@@ -248,7 +249,7 @@ func skipWhitespace(l *Lexer) StateFunction {
 }
 
 // Handles A-instructions (@123 /@loop)
-func aInstruction(l *Lexer) StateFunction {
+func aInstruction(l *Lexer) stateFunction {
 	l.acceptUntil("\t\n ")
 	l.emit(asmAINSTRUCT)
 
@@ -256,7 +257,7 @@ func aInstruction(l *Lexer) StateFunction {
 }
 
 // Handles labels (i.e. (LOOP))
-func atLabel(l *Lexer) StateFunction {
+func atLabel(l *Lexer) stateFunction {
 	l.acceptUntil(")\n")
 	l.emit(asmLABEL)
 
@@ -273,7 +274,7 @@ func atLabel(l *Lexer) StateFunction {
 //
 // this will figure out in which situation we're in, and set the next
 // state accordingly.
-func cInstruction(l *Lexer) StateFunction {
+func cInstruction(l *Lexer) stateFunction {
 	l.acceptUntil("=;")
 	next := string(l.peek())
 
@@ -295,7 +296,7 @@ func cInstruction(l *Lexer) StateFunction {
 }
 
 // Handles the 'c' part of a C-Instruction (d=c;j)
-func atCmp(l *Lexer) StateFunction {
+func atCmp(l *Lexer) stateFunction {
 	l.acceptUntil(";")
 	l.emit(asmCOMP)
 
@@ -303,7 +304,7 @@ func atCmp(l *Lexer) StateFunction {
 }
 
 // Handles the 'j' part of a C-Instruction
-func atJmp(l *Lexer) StateFunction {
+func atJmp(l *Lexer) stateFunction {
 	l.acceptUntil("")
 	l.emit(asmJUMP)
 

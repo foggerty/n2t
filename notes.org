@@ -2,35 +2,127 @@
 
 * To-Do
 - [ ] Get this org file to export the README section every time it's saved.
+- [ ] Get unit tests running inside Emacs.
+- [ ] Get gorename tool working (again, inside of Emacs)
 
 * Readme
 A collection of tools for the [[http://nand2tetris.org/][Nand2Tetris project.]]
 
-** Lexer
-I'm going with a fully fledged parser for the initial Assembler project, so it can be reused in the compiler project.
+** Components
+Everything needed for a basic assembler and compiler.  A Lexer (assembly -> tokens), parser (tokens -> machine code) and a compiler (watch this space, will have own lexer/parser).
+
+I'm going with a fully fledged lexer/parser for the initial Assembler project so that it can be reused in the compiler project.  The Lexer is blatantly ripped from [[https://www.youtube.com/watch?v=HxaD_trXwRE][Rob Pike's talk here]].
+
+It's totally overkill for the assembler, (which is really just an exercise in substitution, and would be easy enough to do with regular expressions (eugh)), but I figure this will be more challenging and a good way to get my head around Go (plus partial reuse in the compiler project).
 
 ** Assembler
-Basic assembler that maps symbols/tokens to machine instructions.  Output is a text file with "binary" values written out as string; internally they're all going to be represented by 16 bit constants that are then OR'd together and converted to a string representation at the end.
-
-** Parser
-TBD
+Basic assembler that maps symbols/tokens to machine instructions.  Output is a text file with "binary" values written out as string.  Internally they're all going to be represented by 16 bit constants that are then OR'd together and converted to a string representation at the end.  This is because it sounds more 'program-y' but mainly because I cannot bring myself to write this using string concatenation (plus it's good practice as I'm learning Go at the same time).
 
 ** Compiler
 TBD
 
-* Lexer
+* Golang notes
+** Godoc
+*** Writing
+Any comments found immediately before the declaration of a type, variable, constant, function or package, with no intervening blank lines, will extracted.
 
- - [X] Wrapper around a hash table for the symbol table.  Don't worry about where stuff is located for now, just one file.
- - [X] Look into Go best practices for organising packages, and reorganise :-)
- - [ ] Find out how the documentation package works, so can document code accordingly
- - [ ] Read up on tests and write some for has table - can I get these running from Emacs?
- - [ ] Code to strip all white space (other than carriage returns)/comments
- - [ ] Work out if everything that I've made public actually needs to be.  i.e. AsmInstruct isn't useful if you're just making an assembler, giving it a text file and expecting instructib
- - [ ] go through the names.  Kinda not great, plus prob over complicating things
+By convention, make the first word the name of whatever it is that you're documenting, as it will be used as a header:
 
-* Assembler
+#+BEGIN_SRC go
+  // Myfunc does "stuff"....
+  func MyFunc()
+#+END_SRC
+
+the above will result in a header "func MyFunc" (in that nice shade of blue that the go team seems to like so much).
+
+Comments elsewhere are ignored, with the exception of ~// BUG(name)~ 
+which will be extracted into the bugs section of the documentation.
+
+URLS - these are converted to links, no markup required.
+
+Pre-formatted text must be indented relative to the surrounding text:
+
+#+BEGIN_SRC go
+// Blah blah
+//   this will be treated a preformatted text
+// More blah blah...
+#+END_SRC
+
+Headers - use something like the following:
+
+#+BEGIN_SRC go
+  /* Blah blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble.
+
+  Some title
+
+  Blah blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble */
+#+END_SRC
+
+That's pretty much it.
+*** Running as a server
+godoc -http=:6060
+
+Will extract docs from GOROOT etc as far as I can tell, because it also displays any documentation that I apply to public types/functions etc.  This is cool.....
+
+*** Querying
+If invoked with the -q option, (and -server is not specified) godoc will first try loclhost:6060, and then godoc.org.
+
+*** Generation
+Godoc seems to take it straight from the source/package itself, so erm, no generation required?  Index may take a while to build though.  Need to play around with it some more, tis is seriously cool and /very/ well thought out.
+** Unit tests
+Create in the same folder as the package code, with the same name as the file you're writing tests for, with ~_test~ appended to the end of it.  Make sure that it has the same package name.  Tests will not be included in the executable.
+
+In that file, import "testing", and create fun functions like:
+
+#+BEGIN_SRC go
+  package packageName
+
+  import "testing"
+
+  func TestAverage(t *testing.T) {
+    // get some result...
+    if result != expected {
+      t.Error("Expected 3.141, but ", badResult)
+    }
+  }
+#+END_SRC
+
+So no assertions etc, no fluent interfaces.  Although fluent interfaces are a symptom of OO code, so yay, no OO!  Also, testing.T would make sooooooo many C# devs lose their shit.  I mustn't like this language because it would offend enterprise purists.....  Shouldn't I?
+
+The ~go test~ command will look for all functions starting with ~Test~ (pascal case FTW) and taking an argument of ~*testing.T~, and run them.  
+
+And that, is pretty much it.
+* Lexer (Assembler)
+
+  - [X] Wrapper around a hash table for the symbol table.  Don't worry about where stuff is located for now, just one file.
+  - [X] Look into Go best practices for organising packages, and reorganise :-)
+  - [X] finish lexer
+  - [X] Find out how the documentation package works, so can document code accordingly
+  - [ ] go through the names.  Kinda not great, plus prob over complicating things
+  - [ ] Read up on tests and write some for symbol table - can I get these running from Emacs?  Make one deliberately fail, just to be sure :-)
+  - [ ] maybe make a lexer method called error, that emits nice error, and then returns nil, without each function having the same functionality
+  - [ ] tests for lexer - known input should produce some stream of tokens.
+  - [ ] Work out if everything that I've made public actually needs to be.  i.e. AsmInstruct isn't useful if you're just making an assembler, giving it a text file and expecting instructions back.  Get gorename working in Emacs for this.
+    
+** How it works....
+
+It's ok for the lexer to guess what a lexene is, but it's up to the parser to confirm it.  Comp instructions have to account for four possibility's:
+ * d=c;j
+ * c;j
+ * d=c
+ * c
+
+but it makes the Lexer too complicated if it has to ensure that each part if hte correct length, or that there are no spaces inside a label, e.g. ~(BAD LABEL)~ is invalid, but teh lexer doesn't know this, it just hand back a label and lets the parser deal with it.
+
+question: need for an EOL token to make parser's job easier?
+
+six states:
+ - start :: if at EOF, return nil.  Otherwise skip whitespace until EOF or one of the following, and return appropriate state function:
+ - "@" a-instruction :: read until white space or EOL/EOF, and emit what's found.  Return start.
+ - "(" label :: read until find matchng ')'.  Emit, skip over match, return start.  If find EOL or EOF, emit error, return nil
+ - c-instruction :: search forward.  If find =, rewind one, emit as a destination, move forward, return atCmp.  If find ; then reind one, emit comp, move forward, return atJmp.  If find whitespace, emit cmp and return start
+   + atCmp :: move forward until either whitespace, EOL or ';'.  Rewind one, emit comp, and return either start or atJmp.
+   + atJump :: search forward until whitespace, EOL or EOF.  emit jump, return start unless at EOF
+* Parser (Assembler)
 TBD
-* Parser
-TBD
-* Compiler
-TBD
+

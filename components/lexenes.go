@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-type AsmInstruction int
+type asmInstruction int
 
 const (
-	asmAINSTRUCT AsmInstruction = iota // @123 or @sum
+	asmAINSTRUCT asmInstruction = iota // @123 or @sum
 	asmLABEL                           // e.g. (END)
 	asmDEST                            // dest part of a c-instruction
 	asmCOMP                            // comp part of a c-instruction
@@ -17,12 +17,12 @@ const (
 	asmERROR                           // something went horribly wrong
 )
 
-type AsmLexine struct {
-	Instruction AsmInstruction
+type Asmlexine struct {
+	Instruction asmInstruction
 	Value       string
 }
 
-func (l AsmLexine) String() string {
+func (l Asmlexine) String() string {
 	switch l.Instruction {
 	case asmEOF:
 		return "EOF"
