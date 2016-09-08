@@ -10,6 +10,12 @@ type SymbolTable struct {
 	labels    map[string]int
 }
 
+func NewSymbolTable() SymbolTable {
+	return SymbolTable{
+		variables: make(map[string]int),
+		labels:    make(map[string]int)}
+}
+
 func (st *SymbolTable) AddLabel(sym string, mem int) error {
 	if _, ok := st.labels[sym]; ok {
 		msg := fmt.Sprintf("Internal error - %s has already been added to the symbol table.", sym)
