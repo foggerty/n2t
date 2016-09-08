@@ -2,8 +2,8 @@
 
 * To-Do
 - [ ] Get this org file to export the README section every time it's saved.
-- [ ] Get unit tests running inside Emacs.
-- [ ] Get gorename tool working (again, inside of Emacs)
+- [X] Get unit tests running inside Emacs.
+- [X] Get gorename tool working (again, inside of Emacs)
 
 * Readme
 A collection of tools for the [[http://nand2tetris.org/][Nand2Tetris project.]]
@@ -147,11 +147,11 @@ And that, is pretty much it.
   - [X] Look into Go best practices for organising packages, and reorganise :-)
   - [X] finish lexer
   - [X] Find out how the documentation package works, so can document code accordingly
+  - [X] Read up on tests and write some for symbol table - can I get these running from Emacs?  Make one deliberately fail, just to be sure :-)
+  - [X] Work out if everything that I've made public actually needs to be.  i.e. AsmInstruct isn't useful if you're just making an assembler, giving it a text file and expecting instructions back.  Get gorename working in Emacs for this.
+  - [ ] tests for lexer - known input should produce same stream of tokens.
   - [ ] go through the names.  Kinda not great, plus prob over complicating things
-  - [ ] Read up on tests and write some for symbol table - can I get these running from Emacs?  Make one deliberately fail, just to be sure :-)
   - [ ] maybe make a lexer method called error, that emits nice error, and then returns nil, without each function having the same functionality
-  - [ ] tests for lexer - known input should produce some stream of tokens.
-  - [ ] Work out if everything that I've made public actually needs to be.  i.e. AsmInstruct isn't useful if you're just making an assembler, giving it a text file and expecting instructions back.  Get gorename working in Emacs for this.
     
 ** How it works....
 
@@ -161,11 +161,9 @@ It's ok for the lexer to guess what a lexene is, but it's up to the parser to co
  * d=c
  * c
 
-but it makes the Lexer too complicated if it has to ensure that each part if hte correct length, or that there are no spaces inside a label, e.g. ~(BAD LABEL)~ is invalid, but teh lexer doesn't know this, it just hand back a label and lets the parser deal with it.
+but it makes the Lexer too complicated if it has to ensure that each part if hte correct length, or that there are no spaces inside a label, e.g. ~(BAD LABEL)~ is invalid, but the lexer doesn't know this, it just hands back a label and lets the parser deal with it.
 
-question: need for an EOL token to make parser's job easier?
-
-six states:
+*Six states:*
  - start :: if at EOF, return nil.  Otherwise skip whitespace until EOF or one of the following, and return appropriate state function:
  - "@" a-instruction :: read until white space or EOL/EOF, and emit what's found.  Return start.
  - "(" label :: read until find matchng ')'.  Emit, skip over match, return start.  If find EOL or EOF, emit error, return nil
