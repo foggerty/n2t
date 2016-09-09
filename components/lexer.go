@@ -288,7 +288,7 @@ func aInstruction(l *Lexer) stateFunction {
 
 // Handles labels (i.e. (LOOP))
 func atLabel(l *Lexer) stateFunction {
-	l.acceptUntil(")\n")
+	l.acceptUntil("\n")
 	l.emit(asmLABEL)
 
 	return skipWhitespace
@@ -339,6 +339,6 @@ func atCmp(l *Lexer) stateFunction {
 func atJmp(l *Lexer) stateFunction {
 	l.acceptUntil("\n")
 	l.emit(asmJUMP)
-	a
+
 	return skipWhitespace
 }

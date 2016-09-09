@@ -15,6 +15,14 @@ var asmTest = []struct {
 		[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
 	{"Tabs 'n things", "    \t  \n\n\t   \t\n   \n\n     \t\t   \t \n \n",
 		[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
+	{"Label only", "   \n\t   (LOOP)",
+		[]Asmlexine{
+			{Instruction: asmLABEL, Value: "(LOOP)"},
+			{Instruction: asmEOF, Value: ""}}},
+	{"A-Instruction only", "@abc123",
+		[]Asmlexine{
+			{Instruction: asmAINSTRUCT, Value: "@abc123"},
+			{Instruction: asmEOF, Value: ""}}},
 	{"Single comp instruction", "compy",
 		[]Asmlexine{
 			{Instruction: asmCOMP, Value: "compy"},
