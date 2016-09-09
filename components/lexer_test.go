@@ -9,25 +9,31 @@ var asmTest = []struct {
 	input    string
 	expected []Asmlexine
 }{
-	{"Null input", "",
-		[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
-	{"Lots o spaces", "        ",
-		[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
-	{"Tabs 'n things", "    \t  \n\n\t   \t\n   \n\n     \t\t   \t \n \n",
-		[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
-	{"Label only", "   \n\t   (LOOP)",
-		[]Asmlexine{
-			{Instruction: asmLABEL, Value: "(LOOP)"},
-			{Instruction: asmEOF, Value: ""}}},
-	{"A-Instruction only", "@abc123",
-		[]Asmlexine{
-			{Instruction: asmAINSTRUCT, Value: "@abc123"},
-			{Instruction: asmEOF, Value: ""}}},
-	{"Single comp instruction", "compy",
-		[]Asmlexine{
-			{Instruction: asmCOMP, Value: "compy"},
-			{Instruction: asmEOF, Value: ""}}},
-	{"Single full instruction", "dest=comp;jmp",
+	//{"Null input", "",
+	// 	[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
+	// {"Lots o spaces", "        ",
+	// 	[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
+	// {"Tabs 'n things", "    \t  \n\n\t   \t\n   \n\n     \t\t   \t \n \n",
+	// 	[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
+	// {"Label only", "   \n\t   (LOOP)",
+	// 	[]Asmlexine{
+	// 		{Instruction: asmLABEL, Value: "(LOOP)"},
+	// 		{Instruction: asmEOF, Value: ""}}},
+	// {"A-Instruction only", "@abc123",
+	// 	[]Asmlexine{
+	// 		{Instruction: asmAINSTRUCT, Value: "@abc123"},
+	// 		{Instruction: asmEOF, Value: ""}}},
+	// {"Single comp instruction", "compy",
+	// 	[]Asmlexine{
+	// 		{Instruction: asmCOMP, Value: "compy"},
+	// 		{Instruction: asmEOF, Value: ""}}},
+	// {"Single full instruction", "dest=comp;jmp",
+	// 	[]Asmlexine{
+	// 		{Instruction: asmDEST, Value: "dest"},
+	// 		{Instruction: asmCOMP, Value: "comp"},
+	// 		{Instruction: asmJUMP, Value: "jmp"},
+	// 		{Instruction: asmEOF, Value: ""}}},
+	{"Single full instruction with newlines and comments", "//moose \n   //wibble\n\ndest=comp;jmp\n\n",
 		[]Asmlexine{
 			{Instruction: asmDEST, Value: "dest"},
 			{Instruction: asmCOMP, Value: "comp"},

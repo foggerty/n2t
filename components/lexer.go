@@ -117,8 +117,7 @@ func (l *Lexer) skipSpaces() {
 	for {
 		r := l.nextRune()
 
-		if r == utf8.RuneError {
-			// Todo - need to handle incorrectly encoded runes
+		if l.atEof() {
 			return
 		}
 
@@ -133,13 +132,9 @@ func (l *Lexer) skipSpaces() {
 	}
 }
 
-func (l *Lexer) catchUp() {
-	l.start = l.pos
-}
-
 func (l *Lexer) skipOne() {
 	l.nextRune()
-	l.catchUp()
+	l.ignore()
 }
 
 // isWhiteSpace returns true if the provided rune is a space, tab or
@@ -224,6 +219,7 @@ func (l *Lexer) atBeginComment() bool {
 }
 
 func (l *Lexer) movePastEol() {
+	_ = "breakpoint"
 	i := strings.Index(l.input[l.start:], "\n")
 
 	if i == -1 {
@@ -233,6 +229,8 @@ func (l *Lexer) movePastEol() {
 
 		return
 	}
+
+	i = i + l.start
 
 	// make sure that \n isn't the very last character
 	if i == len(l.input) {
