@@ -118,6 +118,18 @@ If invoked with the -q option, (and -server is not specified) godoc will first t
 *** Generation
 Godoc seems to take it straight from the source/package itself, so erm, no generation required?  Index may take a while to build though.  Need to play around with it some more, tis is seriously cool and /very/ well thought out.
 
+*** Example functions
+
+This is awesome!  The following code:
+
+#+BEGIN_SRC go
+  func ExampleMyFunc() {
+    fmt.Println(MyFunc(some, params))
+  }
+#+END_SRC
+
+will generate example code in the docs that users can both edit and run.  Note: must start with 'Example' and take no parameters.
+
 ** Unit tests
 Create in the same folder as the package code, with the same name as the file you're writing tests for, with ~_test~ appended to the end of it.  Make sure that it has the same package name.  Tests will not be included in the executable.
 

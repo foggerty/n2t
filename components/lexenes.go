@@ -36,6 +36,8 @@ func (l Asmlexine) String() string {
 		return fmt.Sprintf("jmp - %s", l.Value)
 	case asmCOMP:
 		return fmt.Sprintf("cmp - %s", l.Value)
+	case asmERROR:
+		return "ERROR" + l.Value
 	default:
 		return "I have no idea."
 	}

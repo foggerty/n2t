@@ -52,13 +52,13 @@ func NewLexer(input string) (*Lexer, chan Asmlexine) {
 
 // Run starts the lexer process.
 func (l *Lexer) Run() {
+	defer close(l.items)
+
 	state := skipWhitespace(l)
 
 	for state != nil {
 		state = state(l)
 	}
-
-	close(l.items)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -67,16 +67,20 @@ func (l *Lexer) Run() {
 // acceptUntil will keep moving through the input string until either
 // on of the inValid characters is reached, or white-space or EOL/EOF
 // are reached.
-func (l *Lexer) acceptUntil(inValid string) {
+func (l *Lexer) acceptUntil(inValid string) rune {
 	for {
 		next := l.nextRune()
 
 		isInvalid := strings.IndexRune(inValid, next) >= 0
 		isWhiteSpace := isWhiteSpace(next)
 
-		if isInvalid || isWhiteSpace || l.atEof() {
+		if isInvalid || isWhiteSpace {
 			l.rewind()
-			break
+			return next
+		}
+
+		if l.atEof() {
+			return next
 		}
 	}
 }
@@ -91,19 +95,34 @@ func (l *Lexer) ignore() {
 // emit will thrown the value of pos-start from input onto the output
 // channel
 func (l *Lexer) emit(aI asmInstruction) {
+	var value string
+
+	if aI == asmEOF {
+		value = ""
+	} else {
+		value = l.input[l.start:l.pos]
+	}
+
 	l.items <- Asmlexine{
 		Instruction: aI,
-		Value:       l.input[l.start:l.pos]}
+		Value:       value}
 
 	l.start = l.pos
 	l.width = 0
 }
 
-// skipSpaces moves both pos ad start forward until it hits a non
+// skipSpaces moves both pos and start forward until it hits a non
 // white-space character.
 func (l *Lexer) skipSpaces() {
 	for {
-		next := string(l.nextRune())
+		r := l.nextRune()
+
+		if r == utf8.RuneError {
+			// Todo - need to handle incorrectly encoded runes
+			return
+		}
+
+		next := string(r)
 
 		if next != " " && next != "\t" && next != "\n" {
 			l.rewind()
@@ -114,14 +133,23 @@ func (l *Lexer) skipSpaces() {
 	}
 }
 
+func (l *Lexer) catchUp() {
+	l.start = l.pos
+}
+
+func (l *Lexer) skipOne() {
+	l.nextRune()
+	l.catchUp()
+}
+
 // isWhiteSpace returns true if the provided rune is a space, tab or
 // newline.
 func isWhiteSpace(r rune) bool {
 	test := string(r)
 
-	return test != " " &&
-		test != "\t" &&
-		test != "\n"
+	return test == " " ||
+		test == "\t" ||
+		test == "\n"
 }
 
 // peek peeks at the next rune, without advancing through the string.
@@ -153,12 +181,13 @@ func (l *Lexer) error(msg string, args ...interface{}) stateFunction {
 
 // atEof ....  Pretty sure you can figure this one out.
 func (l *Lexer) atEof() bool {
-	return l.start == len(l.input)
+	return l.pos == len(l.input)
 }
 
 // rewind moves back to the previous rune.
 func (l *Lexer) rewind() {
 	l.pos -= l.width
+	l.width = 0
 }
 
 // RewindTo rewinds BOTH pos and start to a set location.
@@ -232,10 +261,11 @@ func skipWhitespace(l *Lexer) stateFunction {
 	}
 
 	if l.atEof() {
+		l.emit(asmEOF)
 		return nil
 	}
 
-	next := string(l.peek())
+	next := string(l.nextRune())
 
 	if next == "@" {
 		return aInstruction
@@ -275,18 +305,19 @@ func atLabel(l *Lexer) stateFunction {
 // this will figure out in which situation we're in, and set the next
 // state accordingly.
 func cInstruction(l *Lexer) stateFunction {
-	l.acceptUntil("=;")
-	next := string(l.peek())
+	term := string(l.acceptUntil("=;"))
 
 	// destination part of d=c;j
-	if next == "=" {
+	if term == "=" {
 		l.emit(asmDEST)
+		l.skipOne()
 		return atCmp
 	}
 
 	// comp part of c;j
-	if next == ";" {
+	if term == ";" {
 		l.emit(asmCOMP)
+		l.skipOne()
 		return atJmp
 	}
 
@@ -299,14 +330,15 @@ func cInstruction(l *Lexer) stateFunction {
 func atCmp(l *Lexer) stateFunction {
 	l.acceptUntil(";")
 	l.emit(asmCOMP)
+	l.skipOne()
 
 	return atJmp
 }
 
 // Handles the 'j' part of a C-Instruction
 func atJmp(l *Lexer) stateFunction {
-	l.acceptUntil("")
+	l.acceptUntil("\n")
 	l.emit(asmJUMP)
-
+	a
 	return skipWhitespace
 }
