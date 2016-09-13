@@ -17,25 +17,23 @@ var asmTest = []struct {
 
 	{"Lots o comments 1", "// La la\n//woo woo    \n     //Wheee!",
 		[]AsmLexeme{
+			{Instruction: asmEOF, Value: ""},
+		}},
+
+	{"Blank lines", "@1\n@2",
+		[]AsmLexeme{
+			{Instruction: asmAINSTRUCT, Value: "1"},
 			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmAINSTRUCT, Value: "2"},
 			{Instruction: asmEOF, Value: ""},
 		}},
 
 	{"Tabs 'n things", "    \t  \n\n\t   \t\n   \n\n     \t\t   \t \n \n",
 		[]AsmLexeme{
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
 			{Instruction: asmEOF, Value: ""}}},
 
 	{"Label only", "\n\t(LOOP)",
 		[]AsmLexeme{
-			{Instruction: asmEOL, Value: ""},
 			{Instruction: asmLABEL, Value: "LOOP"},
 			{Instruction: asmEOF, Value: ""}}},
 
@@ -46,9 +44,7 @@ var asmTest = []struct {
 
 	{"Single comp instruction", "\n\nD+1",
 		[]AsmLexeme{
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmERROR, Value: "Unknown error at line 3"},
+			{Instruction: asmERROR, Value: "Unknown error at line 3 (D+1)"},
 			{Instruction: asmEOF, Value: ""}}},
 
 	{"Single full instruction", "AMD=D+1;JMP",
@@ -60,13 +56,9 @@ var asmTest = []struct {
 
 	{"Single full instruction with newlines and comments", "//moose \n   //wibble\n\nD=D&M;JLT\n\n",
 		[]AsmLexeme{
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOL, Value: ""},
 			{Instruction: asmDEST, Value: "D"},
 			{Instruction: asmCOMP, Value: "D&M"},
 			{Instruction: asmJUMP, Value: "JLT"},
-			{Instruction: asmEOL, Value: ""},
 			{Instruction: asmEOL, Value: ""},
 			{Instruction: asmEOF, Value: ""}}},
 

@@ -154,41 +154,14 @@ The ~go test~ command will look for all functions starting with ~Test~ (pascal c
 
 And that, is pretty much it.
 * Lexer (Assembler)
+- [X] Think about only returning an EOL if have already send an actual instruction?  Flag when encounter instruction, clear when encounter an EOL, and only sed an EOL if the flag is set.
+- [X] Figure out why empty lines are not being counted.
+- [X] swear a fuck of a lot more because I forgot that Unix and Windows use different line-ending characters.
+- [X] Figure out why the line numbers are not being recorded correctly.
+- [X] Fix Windows issues (hah!)
+- [ ] General tidy (endOfCode can be simplified, i.e. only init should emit EOF), then move onto "assembler".
+- [ ] If /really/ want to, figure out why some test scenarios have an EOL before teh EOF, while other dont'.
 
-  - [X] Wrapper around a hash table for the symbol table.  Don't worry about where stuff is located for now, just one file.
-  - [X] Look into Go best practices for organising packages, and reorganise :-)
-  - [X] finish lexer
-  - [X] Find out how the documentation package works, so can document code accordingly
-  - [X] Read up on tests and write some for symbol table - can I get these running from Emacs?  Make one deliberately fail, just to be sure :-)
-  - [X] Work out if everything that I've made public actually needs to be.  i.e. AsmInstruct isn't useful if you're just making an assembler, giving it a text file and expecting instructions back.  Get gorename working in Emacs for this.
-  - [X] tests for lexer - known input should produce same stream of tokens.
-  - [X] go through the names.  Kinda not great, plus prob over complicating things
-  - [X] Take notes on Lexing vs parsing: [[https://en.wikipedia.org/wiki/Lexical_analysis][here]], [[https://en.wikipedia.org/wiki/Parsing][here]], [[http://www.perl.com/pub/2012/10/an-overview-of-lexing-and-parsing.html][here]]  /FOCUS ON THE LEXER!/  Only read enough on parsing to know where the responsibility lies, /don't/ start learning them yet, as wont be needed until the Compiler project.  For the assembler I can just wing it.
-  - [X] Rename Lexine to lexeme
-  - [X] Simple front-end to lexer to take input, and spit out lexenes to std out or specified file
-  - [X] Add an error Lexeme
-  - [X] Delete acceptUntil
-  - [X] Make an "accept" method
-  - [X] Add constants to specify valid symbol names, instructions etc
-  - [X] update existing state functions to use accept
-  - [X] tests!
-  - [X] remind self that this is a functional(ish) state machine; in other words, should think of each state function as knowing only a) what it's expected to emit (including errors) and b) what states it can then hand off the work to.  I've been trying to think of them as working all together, which they do, but that leads to expecting side effects from other states and predicting what's happened before.  Each state should assume that it's at the exact place it needs to be to start work, and have zero expectations of what's already happened.
-  - [X] Add in EOL lexeme
-  - [X] Add linenumber to lexeme
-  - [X] Write a peek function
-  - [X] errorState - an error has been detected, emit error, skip to past EOL (or EOF) and return skipWhitespace
-  - [X] When finished dest, if next char is anything but = or ;, emit en error, and return errorState
-  - [X] FOr all existing state functions, if they run accept() and come up empty, emit error and retrun errorState
-  - [X] When finished comp, if next char is anything but ; or a space, emit an error and return errorState
-  - [ ] lookForEol - skips whitespace, if find comment will skip to eol, otherwise emit error and return errroState
-  - [ ] When finished jmp, emit and return lookForEol
-  - [ ] When finished aInstruction, return lookForEol
-  - [ ] When finished symbol, return lookForEol
-  - [ ] both lookForEol and errorState should increment currentLineNumber 
-  - [ ] Update tests!
-  - [ ] Track current line number
-  - [ ] Add line number to errors, move the emiting of an error into a warpper function that takes a line number, emites an error, and then returns the errorState function
-  - [ ] Determine if can skip over comments without using the rewind to method.  Could just save pos locally and then set it back?
 * Parser (Assembler)
 TBD
 

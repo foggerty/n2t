@@ -30,12 +30,13 @@ type stateFunction func(*Lexer) stateFunction
 // Lexer tracks the progress as the lexer process moves through the
 // input string.
 type Lexer struct {
-	input   string         // entire source file, not bothering with streaming (for now)
-	start   int            // start of current item in bytes, NOT characters
-	pos     int            // the position as we search along/end of current item
-	width   int            // width of last rune that was read
-	items   chan AsmLexeme // channel on which to pass back the tokens
-	lineNum int            // current source line number
+	input    string         // entire source file, not bothering with streaming (for now)
+	start    int            // start of current item in bytes, NOT characters
+	pos      int            // the position as we search along/end of current item
+	width    int            // width of last rune that was read
+	items    chan AsmLexeme // channel on which to pass back the tokens
+	lineNum  int            // current source line number
+	haveComp bool           // true if we've just processed an instruction
 }
 
 // NewLexer returns both a lexer structure, and its output channel, on
@@ -66,7 +67,7 @@ func (l *Lexer) Run() {
 ////////////////////////////////////////////////////////////////////////////////
 // character sets for various tokens (symbol, instruction etc)
 
-const validSymbol string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.$:"
+const validSymbol string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.$:-"
 const validInstruction string = "-+01!AMD&|nullJGELMNTQEP"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -99,6 +100,13 @@ func (l *Lexer) skip(valid string) {
 // emit will thrown the value of pos-start from input onto the output
 // channel
 func (l *Lexer) emit(aI asmInstruction) {
+	if aI == asmEOL && !l.haveComp {
+		l.lineNum++
+		return
+	}
+
+	l.haveComp = aI != asmEOL
+
 	var value string
 
 	if aI == asmEOF || aI == asmEOL {
@@ -107,13 +115,14 @@ func (l *Lexer) emit(aI asmInstruction) {
 		value = l.input[l.start:l.pos]
 	}
 
+	l.items <- AsmLexeme{
+		Instruction: aI,
+		Value:       value,
+		LineNum:     l.lineNum}
+
 	if aI == asmEOL {
 		l.lineNum++
 	}
-
-	l.items <- AsmLexeme{
-		Instruction: aI,
-		Value:       value}
 
 	l.start = l.pos
 	l.width = 0
@@ -122,6 +131,19 @@ func (l *Lexer) emit(aI asmInstruction) {
 func (l *Lexer) skipOne() {
 	l.nextRune()
 	l.start = l.pos
+}
+
+func (l *Lexer) skipEol() {
+	n := l.peek()
+
+	if n == "\r" {
+		l.skipOne()
+		l.skipOne()
+	}
+
+	if n == "\n" {
+		l.skipOne()
+	}
 }
 
 // peek peeks at the next rune, without advancing through the string.
@@ -165,7 +187,7 @@ func (l *Lexer) nextRune() rune {
 func (l *Lexer) error() stateFunction {
 	l.items <- AsmLexeme{
 		Instruction: asmERROR,
-		Value:       fmt.Sprintf("Unknown error at line %d", l.lineNum)}
+		Value:       fmt.Sprintf("Unknown error at line %d (%s)", l.lineNum, l.input[l.start:l.pos])}
 
 	return nil
 }
@@ -183,7 +205,26 @@ func (l *Lexer) atEol() bool {
 
 	next := l.peek()
 
-	return next == "\n"
+	return next == "\r" || next == "\n"
+}
+
+func (l *Lexer) moveToEol() {
+	// first check that there is an EOL
+	i := strings.Index(l.input[l.pos:], "\r")
+
+	if i == -1 {
+		i = strings.Index(l.input[l.pos:], "\n")
+	}
+
+	// is this the last line?
+	if i == -1 {
+		// move to EOF
+		i = len(l.input)
+	} else {
+		i += l.pos
+	}
+
+	l.start, l.pos = i, i
 }
 
 // rewind moves back to the previous rune.
@@ -213,20 +254,6 @@ func (l *Lexer) atBeginComment() bool {
 	return test == "//"
 }
 
-func (l *Lexer) moveToEol() {
-	_ = "breakpoint"
-	i := strings.Index(l.input[l.pos:], "\n")
-
-	// is this the last line?
-	if i == -1 {
-		i = len(l.input)
-	} else {
-		i += l.pos
-	}
-
-	l.start, l.pos = i, i
-}
-
 func (l *Lexer) noCapture() bool {
 	return (l.pos - l.start) == 0
 }
@@ -237,11 +264,13 @@ func (l *Lexer) noCapture() bool {
 // General "move forward until we find something useful" function.
 // Makes no assumptions about where it is.
 func initState(l *Lexer) stateFunction {
+	_ = "breakpoint"
 	l.skip(" \t")
 
 	if l.atEol() {
+		l.skipEol()
 		l.emit(asmEOL)
-		l.skipOne()
+
 		return initState
 	}
 
@@ -289,7 +318,7 @@ func endOfCode(l *Lexer) stateFunction {
 
 	next := l.peek()
 
-	if next == "\n" {
+	if next == "\r" || next == "\n" {
 		return initState
 	}
 
