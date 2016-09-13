@@ -1,6 +1,6 @@
 package components
 
-func (act Asmlexine) misMatch(exp Asmlexine) bool {
+func (act AsmLexeme) misMatch(exp AsmLexeme) bool {
 	return act.Instruction != exp.Instruction || act.Value != exp.Value
 }
 

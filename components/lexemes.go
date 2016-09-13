@@ -17,29 +17,32 @@ const (
 	asmERROR                           // something went horribly wrong
 )
 
-type Asmlexine struct {
+type AsmLexeme struct {
 	Instruction asmInstruction
 	Value       string
+	LineNum     int
 }
 
-func (l Asmlexine) String() string {
+func (l AsmLexeme) String() string {
 	switch l.Instruction {
 	case asmEOF:
 		return "EOF"
+	case asmEOL:
+		return fmt.Sprintf("(%d) EOL", l.LineNum)
 	case asmAINSTRUCT:
-		return fmt.Sprintf("@%s", l.Value)
+		return fmt.Sprintf("(%d) @%s", l.LineNum, l.Value)
 	case asmLABEL:
-		return fmt.Sprintf("(%s)", l.Value)
+		return fmt.Sprintf("(%d) (%s)", l.LineNum, l.Value)
 	case asmDEST:
-		return fmt.Sprintf("dst - %s", l.Value)
+		return fmt.Sprintf("(%d) dst - %s", l.LineNum, l.Value)
 	case asmJUMP:
-		return fmt.Sprintf("jmp - %s", l.Value)
+		return fmt.Sprintf("(%d) jmp - %s", l.LineNum, l.Value)
 	case asmCOMP:
-		return fmt.Sprintf("cmp - %s", l.Value)
+		return fmt.Sprintf("(%d) cmp - %s", l.LineNum, l.Value)
 	case asmERROR:
-		return "ERROR" + l.Value
+		return "ERROR - " + l.Value
 	default:
-		return "I have no idea."
+		panic("Ohshitohshitohshitohshit")
 	}
 }
 
@@ -50,7 +53,7 @@ const (
 	cmpThing2
 )
 
-type CompLexene struct {
+type CompLexeme struct {
 	instruction CompilerInstruction
 	value       string
 }

@@ -7,37 +7,77 @@ import "testing"
 var asmTest = []struct {
 	name     string
 	input    string
-	expected []Asmlexine
+	expected []AsmLexeme
 }{
-	//{"Null input", "",
-	// 	[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
-	// {"Lots o spaces", "        ",
-	// 	[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
-	// {"Tabs 'n things", "    \t  \n\n\t   \t\n   \n\n     \t\t   \t \n \n",
-	// 	[]Asmlexine{{Instruction: asmEOF, Value: ""}}},
-	// {"Label only", "   \n\t   (LOOP)",
-	// 	[]Asmlexine{
-	// 		{Instruction: asmLABEL, Value: "(LOOP)"},
-	// 		{Instruction: asmEOF, Value: ""}}},
-	// {"A-Instruction only", "@abc123",
-	// 	[]Asmlexine{
-	// 		{Instruction: asmAINSTRUCT, Value: "@abc123"},
-	// 		{Instruction: asmEOF, Value: ""}}},
-	// {"Single comp instruction", "compy",
-	// 	[]Asmlexine{
-	// 		{Instruction: asmCOMP, Value: "compy"},
-	// 		{Instruction: asmEOF, Value: ""}}},
-	// {"Single full instruction", "dest=comp;jmp",
-	// 	[]Asmlexine{
-	// 		{Instruction: asmDEST, Value: "dest"},
-	// 		{Instruction: asmCOMP, Value: "comp"},
-	// 		{Instruction: asmJUMP, Value: "jmp"},
-	// 		{Instruction: asmEOF, Value: ""}}},
-	{"Single full instruction with newlines and comments", "//moose \n   //wibble\n\ndest=comp;jmp\n\n",
-		[]Asmlexine{
-			{Instruction: asmDEST, Value: "dest"},
-			{Instruction: asmCOMP, Value: "comp"},
-			{Instruction: asmJUMP, Value: "jmp"},
+	{"Null input", "",
+		[]AsmLexeme{{Instruction: asmEOF, Value: ""}}},
+
+	{"Lots o spaces", "        ",
+		[]AsmLexeme{{Instruction: asmEOF, Value: ""}}},
+
+	{"Lots o comments 1", "// La la\n//woo woo    \n     //Wheee!",
+		[]AsmLexeme{
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOF, Value: ""},
+		}},
+
+	{"Tabs 'n things", "    \t  \n\n\t   \t\n   \n\n     \t\t   \t \n \n",
+		[]AsmLexeme{
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOF, Value: ""}}},
+
+	{"Label only", "\n\t(LOOP)",
+		[]AsmLexeme{
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmLABEL, Value: "LOOP"},
+			{Instruction: asmEOF, Value: ""}}},
+
+	{"A-Instruction only", "@abc123",
+		[]AsmLexeme{
+			{Instruction: asmAINSTRUCT, Value: "abc123"},
+			{Instruction: asmEOF, Value: ""}}},
+
+	{"Single comp instruction", "\n\nD+1",
+		[]AsmLexeme{
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmERROR, Value: "Unknown error at line 3"},
+			{Instruction: asmEOF, Value: ""}}},
+
+	{"Single full instruction", "AMD=D+1;JMP",
+		[]AsmLexeme{
+			{Instruction: asmDEST, Value: "AMD"},
+			{Instruction: asmCOMP, Value: "D+1"},
+			{Instruction: asmJUMP, Value: "JMP"},
+			{Instruction: asmEOF, Value: ""}}},
+
+	{"Single full instruction with newlines and comments", "//moose \n   //wibble\n\nD=D&M;JLT\n\n",
+		[]AsmLexeme{
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmDEST, Value: "D"},
+			{Instruction: asmCOMP, Value: "D&M"},
+			{Instruction: asmJUMP, Value: "JLT"},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmEOF, Value: ""}}},
+
+	{"Three instructions.", " D=D+M  \n @123\n  (LOOP)",
+		[]AsmLexeme{
+			{Instruction: asmDEST, Value: "D"},
+			{Instruction: asmCOMP, Value: "D+M"},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmAINSTRUCT, Value: "123"},
+			{Instruction: asmEOL, Value: ""},
+			{Instruction: asmLABEL, Value: "LOOP"},
 			{Instruction: asmEOF, Value: ""}}},
 }
 
@@ -45,7 +85,7 @@ func TestTheLot(t *testing.T) {
 	for _, asmT := range asmTest {
 		// new lexer
 		_, items := NewLexer(asmT.input)
-		results := make([]Asmlexine, 0)
+		results := make([]AsmLexeme, 0)
 
 		// collect results
 		for res := range items {
@@ -57,9 +97,9 @@ func TestTheLot(t *testing.T) {
 	}
 }
 
-func checkResults(t *testing.T, name string, expected []Asmlexine, actual []Asmlexine) {
-	const lengthMismatch = "%s: wa s expecting to get %d tokens, but got %d."
-	const mismatchedToken = "%s: mismatch, got %q but expected %q."
+func checkResults(t *testing.T, name string, expected []AsmLexeme, actual []AsmLexeme) {
+	const lengthMismatch = "%s:\n was expecting to get %d tokens, but got %d."
+	const mismatchedToken = "%s:\n Expected %q but got %q."
 
 	lenExpected := len(expected)
 	lenActual := len(actual)
@@ -72,7 +112,7 @@ func checkResults(t *testing.T, name string, expected []Asmlexine, actual []Asml
 		diff := expected[i].misMatch(actual[i])
 
 		if diff {
-			t.Errorf(mismatchedToken, name, actual[i], expected[i])
+			t.Errorf(mismatchedToken, name, expected[i], actual[i])
 		}
 	}
 }

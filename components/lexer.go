@@ -30,20 +30,22 @@ type stateFunction func(*Lexer) stateFunction
 // Lexer tracks the progress as the lexer process moves through the
 // input string.
 type Lexer struct {
-	input string         // entire source file, not bothering with streaming (for now)
-	start int            // start of current item in bytes, NOT characters
-	pos   int            // the position as we search along/end of current item
-	width int            // width of last rune that was read
-	items chan Asmlexine // channel on which to pass back the tokens
+	input   string         // entire source file, not bothering with streaming (for now)
+	start   int            // start of current item in bytes, NOT characters
+	pos     int            // the position as we search along/end of current item
+	width   int            // width of last rune that was read
+	items   chan AsmLexeme // channel on which to pass back the tokens
+	lineNum int            // current source line number
 }
 
 // NewLexer returns both a lexer structure, and its output channel, on
 // which 'lexenes' (is that an actual word?) get passed as they are
 // read.
-func NewLexer(input string) (*Lexer, chan Asmlexine) {
+func NewLexer(input string) (*Lexer, chan AsmLexeme) {
 	l := &Lexer{
-		input: input,
-		items: make(chan Asmlexine)}
+		input:   input,
+		items:   make(chan AsmLexeme),
+		lineNum: 1}
 
 	go l.Run()
 
@@ -54,7 +56,7 @@ func NewLexer(input string) (*Lexer, chan Asmlexine) {
 func (l *Lexer) Run() {
 	defer close(l.items)
 
-	state := skipWhitespace(l)
+	state := initState(l)
 
 	for state != nil {
 		state = state(l)
@@ -62,34 +64,36 @@ func (l *Lexer) Run() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// character sets for various tokens (symbol, instruction etc)
+
+const validSymbol string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.$:"
+const validInstruction string = "-+01!AMD&|nullJGELMNTQEP"
+
+////////////////////////////////////////////////////////////////////////////////
 // helper routines
 
-// acceptUntil will keep moving through the input string until either
-// on of the inValid characters is reached, or white-space or EOL/EOF
-// are reached.
-func (l *Lexer) acceptUntil(inValid string) rune {
-	for {
-		next := l.nextRune()
+func (l *Lexer) accept(valid string) {
+	next := l.nextRune()
 
-		isInvalid := strings.IndexRune(inValid, next) >= 0
-		isWhiteSpace := isWhiteSpace(next)
-
-		if isInvalid || isWhiteSpace {
-			l.rewind()
-			return next
-		}
-
-		if l.atEof() {
-			return next
-		}
+	for strings.ContainsRune(valid, next) {
+		next = l.nextRune()
 	}
+
+	l.rewind()
 }
 
-// ignore moves the start position up to the current 'read' thingie.
-// Used if we want to throw away what we've just traversed (comments
-// etc).
-func (l *Lexer) ignore() {
+func (l *Lexer) skip(valid string) {
 	l.start = l.pos
+	next := l.peek()
+
+	// it turns out that Go, C# and Ruby all think that ANY string
+	// contains the empty string.  So I figure this must be pretty much
+	// language-standard.  Doh :-)
+
+	for strings.Contains(valid, next) && next != "" {
+		l.skipOne()
+		next = l.peek()
+	}
 }
 
 // emit will thrown the value of pos-start from input onto the output
@@ -97,13 +101,17 @@ func (l *Lexer) ignore() {
 func (l *Lexer) emit(aI asmInstruction) {
 	var value string
 
-	if aI == asmEOF {
+	if aI == asmEOF || aI == asmEOL {
 		value = ""
 	} else {
 		value = l.input[l.start:l.pos]
 	}
 
-	l.items <- Asmlexine{
+	if aI == asmEOL {
+		l.lineNum++
+	}
+
+	l.items <- AsmLexeme{
 		Instruction: aI,
 		Value:       value}
 
@@ -111,46 +119,34 @@ func (l *Lexer) emit(aI asmInstruction) {
 	l.width = 0
 }
 
-// skipSpaces moves both pos and start forward until it hits a non
-// white-space character.
-func (l *Lexer) skipSpaces() {
-	for {
-		r := l.nextRune()
-
-		if l.atEof() {
-			return
-		}
-
-		next := string(r)
-
-		if next != " " && next != "\t" && next != "\n" {
-			l.rewind()
-			break
-		}
-
-		l.ignore()
-	}
-}
-
 func (l *Lexer) skipOne() {
 	l.nextRune()
-	l.ignore()
-}
-
-// isWhiteSpace returns true if the provided rune is a space, tab or
-// newline.
-func isWhiteSpace(r rune) bool {
-	test := string(r)
-
-	return test == " " ||
-		test == "\t" ||
-		test == "\n"
+	l.start = l.pos
 }
 
 // peek peeks at the next rune, without advancing through the string.
-func (l *Lexer) peek() rune {
+func (l *Lexer) peek() string {
+	if l.atEof() {
+		return ""
+	}
+
 	result := l.nextRune()
 	l.rewind()
+
+	return string(result)
+}
+
+// peeks at the next x runes
+func (l *Lexer) peekAt(x int) string {
+	current := l.pos
+	var result string
+
+	for x > 0 {
+		rune, width := utf8.DecodeRuneInString(l.input[current:])
+		result += string(rune)
+		current += width
+		x--
+	}
 
 	return result
 }
@@ -165,18 +161,29 @@ func (l *Lexer) nextRune() rune {
 	return rune
 }
 
-// error - I should use this method...
-func (l *Lexer) error(msg string, args ...interface{}) stateFunction {
-	l.items <- Asmlexine{
+// Just emits an error lexeme.
+func (l *Lexer) error() stateFunction {
+	l.items <- AsmLexeme{
 		Instruction: asmERROR,
-		Value:       fmt.Sprintf(msg, args)}
+		Value:       fmt.Sprintf("Unknown error at line %d", l.lineNum)}
 
 	return nil
 }
 
 // atEof ....  Pretty sure you can figure this one out.
 func (l *Lexer) atEof() bool {
-	return l.pos == len(l.input)
+	return l.pos >= len(l.input)
+}
+
+// True if next rune is \n, otherwise false.
+func (l *Lexer) atEol() bool {
+	if l.atEof() {
+		return false
+	}
+
+	next := l.peek()
+
+	return next == "\n"
 }
 
 // rewind moves back to the previous rune.
@@ -197,65 +204,45 @@ func (l *Lexer) rewindTo(p int) error {
 }
 
 func (l *Lexer) atBeginComment() bool {
-	// If the rune at start is '/' and so is the one immediately
-	// following, we're at a comment.
-
 	if l.atEof() {
 		return false
 	}
 
-	initialPos := l.pos
-	first := string(l.nextRune())
+	test := l.peekAt(2)
 
-	if first != "/" || l.atEof() {
-		l.rewind()
-		return false
-	}
-
-	second := string(l.nextRune())
-	l.rewindTo(initialPos)
-
-	return second == "/"
+	return test == "//"
 }
 
-func (l *Lexer) movePastEol() {
+func (l *Lexer) moveToEol() {
 	_ = "breakpoint"
-	i := strings.Index(l.input[l.start:], "\n")
+	i := strings.Index(l.input[l.pos:], "\n")
 
+	// is this the last line?
 	if i == -1 {
-		length := len(l.input)
-		l.start = length
-		l.pos = length
-
-		return
+		i = len(l.input)
+	} else {
+		i += l.pos
 	}
 
-	i = i + l.start
+	l.start, l.pos = i, i
+}
 
-	// make sure that \n isn't the very last character
-	if i == len(l.input) {
-		i -= 1
-	}
-
-	l.start = i + 1
-	l.pos = i + 1
+func (l *Lexer) noCapture() bool {
+	return (l.pos - l.start) == 0
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // State functions
 
 // General "move forward until we find something useful" function.
-func skipWhitespace(l *Lexer) stateFunction {
-	for {
-		l.skipSpaces()
+// Makes no assumptions about where it is.
+func initState(l *Lexer) stateFunction {
+	l.skip(" \t")
 
-		if !l.atBeginComment() {
-			break
-		}
-
-		for l.atBeginComment() {
-			l.movePastEol()
-		}
+	if l.atEol() {
+		l.emit(asmEOL)
+		l.skipOne()
+		return initState
 	}
 
 	if l.atEof() {
@@ -263,33 +250,81 @@ func skipWhitespace(l *Lexer) stateFunction {
 		return nil
 	}
 
-	next := string(l.nextRune())
+	for l.atBeginComment() {
+		l.moveToEol()
+		return initState
+	}
+
+	next := l.peek()
 
 	if next == "@" {
+		l.skipOne()
 		return aInstruction
 	}
 
 	if next == "(" {
+		l.skipOne()
 		return atLabel
 	}
 
-	return cInstruction
+	return atCInstruction
 }
 
-// Handles A-instructions (@123 /@loop)
+// Moves to the EOL.
+// Assumes that at the end of an instruction or a symbol, so
+// anything other than white space or a comment before EOL or EOF
+// is an error.
+func endOfCode(l *Lexer) stateFunction {
+	l.skip(" \t")
+
+	if l.atEof() {
+		l.emit(asmEOF)
+		return nil
+	}
+
+	if l.atBeginComment() {
+		l.moveToEol()
+		return initState
+	}
+
+	next := l.peek()
+
+	if next == "\n" {
+		return initState
+	}
+
+	return errState
+}
+
+// Handles A-instructions (@123 / @loop)
+// Assumes that it is positioned just after the '@'.
 func aInstruction(l *Lexer) stateFunction {
-	l.acceptUntil("\t\n ")
+	l.accept(validSymbol)
+
+	if l.noCapture() {
+		return errState
+	}
+
 	l.emit(asmAINSTRUCT)
 
-	return skipWhitespace
+	return endOfCode
 }
 
-// Handles labels (i.e. (LOOP))
+// Handles labels i.e. (LOOP)
+// Assumes that it is positioned just after the opening '('
 func atLabel(l *Lexer) stateFunction {
-	l.acceptUntil("\n")
-	l.emit(asmLABEL)
+	l.accept(validSymbol)
 
-	return skipWhitespace
+	next := l.peek()
+
+	if l.noCapture() || next != ")" {
+		return errState
+	}
+
+	l.emit(asmLABEL)
+	l.skipOne() // step over the closing ')'
+
+	return endOfCode
 }
 
 // Handles C-Instructions.
@@ -302,41 +337,84 @@ func atLabel(l *Lexer) stateFunction {
 //
 // this will figure out in which situation we're in, and set the next
 // state accordingly.
-func cInstruction(l *Lexer) stateFunction {
-	term := string(l.acceptUntil("=;"))
+//
+// Assumes that it's at the beginning of some text.  Hopefully
+// it's a C-Instruction.
+func atCInstruction(l *Lexer) stateFunction {
+	l.accept(validInstruction)
+
+	if l.noCapture() {
+		return errState
+	}
+
+	next := l.peek()
 
 	// destination part of d=c;j
-	if term == "=" {
+	if next == "=" {
 		l.emit(asmDEST)
 		l.skipOne()
 		return atCmp
 	}
 
 	// comp part of c;j
-	if term == ";" {
+	if next == ";" {
 		l.emit(asmCOMP)
 		l.skipOne()
 		return atJmp
 	}
 
-	// comp only (legal, but doesn't really achieve anything)
-	l.emit(asmCOMP)
-	return skipWhitespace
+	// This may be a comp instruction, but by itself that does nothing
+	// other than burn cycles.
+	return errState
 }
 
 // Handles the 'c' part of a C-Instruction (d=c;j)
+// Assumes positioned immediately after the '='.
 func atCmp(l *Lexer) stateFunction {
-	l.acceptUntil(";")
-	l.emit(asmCOMP)
-	l.skipOne()
+	l.accept(validInstruction)
 
-	return atJmp
+	if l.noCapture() {
+		return errState
+	}
+
+	l.emit(asmCOMP)
+
+	next := l.peek()
+
+	if next == ";" {
+		l.skipOne()
+		return atJmp
+	}
+
+	return endOfCode
 }
 
-// Handles the 'j' part of a C-Instruction
+// Handles the 'j' part of a C-Instruction.
+// Assumes is positioned immediately after the ';'
 func atJmp(l *Lexer) stateFunction {
-	l.acceptUntil("\n")
+	l.accept(validInstruction)
+
+	if l.noCapture() {
+		return errState
+	}
+
 	l.emit(asmJUMP)
 
-	return skipWhitespace
+	return endOfCode
+}
+
+// Assumes that it's all gone to hell.
+// Emit an error, and moves past the EOL, return skipWhitespace
+// If there is no EOL before EOF, return nil.
+func errState(l *Lexer) stateFunction {
+	l.error()
+
+	l.moveToEol()
+
+	if l.atEof() {
+		l.emit(asmEOF)
+		return nil
+	}
+
+	return initState
 }
