@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-type asmInstruction int
+type AsmInstruction int
 
 const (
-	asmAINSTRUCT asmInstruction = iota // @123 or @sum
+	asmAINSTRUCT AsmInstruction = iota // @123 or @sum
 	asmLABEL                           // e.g. (END)
 	asmDEST                            // dest part of a c-instruction
 	asmCOMP                            // comp part of a c-instruction
@@ -18,7 +18,7 @@ const (
 )
 
 type AsmLexeme struct {
-	Instruction asmInstruction
+	Instruction AsmInstruction
 	Value       string
 	LineNum     int
 }

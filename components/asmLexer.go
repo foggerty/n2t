@@ -99,7 +99,7 @@ func (l *Lexer) skip(valid string) {
 
 // emit will thrown the value of pos-start from input onto the output
 // channel
-func (l *Lexer) emit(aI asmInstruction) {
+func (l *Lexer) emit(aI AsmInstruction) {
 	if aI == asmEOL && !l.haveComp {
 		l.lineNum++
 		return

@@ -159,8 +159,15 @@ And that, is pretty much it.
 - [X] swear a fuck of a lot more because I forgot that Unix and Windows use different line-ending characters.
 - [X] Figure out why the line numbers are not being recorded correctly.
 - [X] Fix Windows issues (hah!)
-- [ ] General tidy (endOfCode can be simplified, i.e. only init should emit EOF), then move onto "assembler".
-- [ ] If /really/ want to, figure out why some test scenarios have an EOL before teh EOF, while other dont'.
+- [ ] Set up constants (in map literal) for machine instructions
+- [ ] first loop - go through collecting symbols and adding to symbol table
+- [ ] generate numbers for the symbols
+- [ ] second loop, output ints to a file
+- [ ] test
+- [ ] General tidy (endOfCode can be simplified, i.e. only init should emit EOF)
+- [ ] If /really/ want to, figure out why some test scenarios have an EOL before teh EOF, while others don't.
+- [ ] See if can get Git to ignore executable files?
+
 
 * Parser (Assembler)
 TBD
