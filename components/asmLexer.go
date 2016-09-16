@@ -1,16 +1,11 @@
-/*
+/*x
+  asmLexer
 
-Package components has all of the components requires for both the
-assembler and compiler that are written for the Nand2Tetris course
-(http://nand2tetris.org/)
+  Input: a string
 
-Idea blatantly stolen from Rob Pike's talk here:
-https://www.youtube.com/watch?v=HxaD_trXwRE
-
-I've never written a lexer/parser before, and I'm also learning Go
-while I do so.  Should be fun :-)
-
+  Output: a channel of asmLexemes
 */
+
 package components
 
 import (
@@ -42,19 +37,19 @@ type Lexer struct {
 // NewLexer returns both a lexer structure, and its output channel, on
 // which 'lexenes' (is that an actual word?) get passed as they are
 // read.
-func NewLexer(input string) (*Lexer, chan AsmLexeme) {
+func newLexer(input string) chan AsmLexeme {
 	l := &Lexer{
 		input:   input,
 		items:   make(chan AsmLexeme),
 		lineNum: 1}
 
-	go l.Run()
+	go l.run()
 
-	return l, l.items
+	return l.items
 }
 
 // Run starts the lexer process.
-func (l *Lexer) Run() {
+func (l *Lexer) run() {
 	defer close(l.items)
 
 	state := initState(l)
@@ -116,9 +111,9 @@ func (l *Lexer) emit(aI AsmInstruction) {
 	}
 
 	l.items <- AsmLexeme{
-		Instruction: aI,
-		Value:       value,
-		LineNum:     l.lineNum}
+		instruction: aI,
+		value:       value,
+		lineNum:     l.lineNum}
 
 	if aI == asmEOL {
 		l.lineNum++
@@ -186,8 +181,8 @@ func (l *Lexer) nextRune() rune {
 // Just emits an error lexeme.
 func (l *Lexer) error() stateFunction {
 	l.items <- AsmLexeme{
-		Instruction: asmERROR,
-		Value:       fmt.Sprintf("Unknown error at line %d (%s)", l.lineNum, l.input[l.start:l.pos])}
+		instruction: asmERROR,
+		value:       fmt.Sprintf("Unknown error at line %d (%s)", l.lineNum, l.input[l.start:l.pos])}
 
 	return nil
 }

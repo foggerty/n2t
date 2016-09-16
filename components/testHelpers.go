@@ -1,7 +1,7 @@
 package components
 
 func (act AsmLexeme) misMatch(exp AsmLexeme) bool {
-	return act.Instruction != exp.Instruction || act.Value != exp.Value
+	return act.instruction != exp.instruction || act.value != exp.value
 }
 
 func min(x, y int) int {

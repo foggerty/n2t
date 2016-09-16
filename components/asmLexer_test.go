@@ -10,73 +10,73 @@ var asmTest = []struct {
 	expected []AsmLexeme
 }{
 	{"Null input", "",
-		[]AsmLexeme{{Instruction: asmEOF, Value: ""}}},
+		[]AsmLexeme{{instruction: asmEOF, value: ""}}},
 
 	{"Lots o spaces", "        ",
-		[]AsmLexeme{{Instruction: asmEOF, Value: ""}}},
+		[]AsmLexeme{{instruction: asmEOF, value: ""}}},
 
 	{"Lots o comments 1", "// La la\n//woo woo    \n     //Wheee!",
 		[]AsmLexeme{
-			{Instruction: asmEOF, Value: ""},
+			{instruction: asmEOF, value: ""},
 		}},
 
 	{"Blank lines", "@1\n@2",
 		[]AsmLexeme{
-			{Instruction: asmAINSTRUCT, Value: "1"},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmAINSTRUCT, Value: "2"},
-			{Instruction: asmEOF, Value: ""},
+			{instruction: asmAINSTRUCT, value: "1"},
+			{instruction: asmEOL, value: ""},
+			{instruction: asmAINSTRUCT, value: "2"},
+			{instruction: asmEOF, value: ""},
 		}},
 
 	{"Tabs 'n things", "    \t  \n\n\t   \t\n   \n\n     \t\t   \t \n \n",
 		[]AsmLexeme{
-			{Instruction: asmEOF, Value: ""}}},
+			{instruction: asmEOF, value: ""}}},
 
 	{"Label only", "\n\t(LOOP)",
 		[]AsmLexeme{
-			{Instruction: asmLABEL, Value: "LOOP"},
-			{Instruction: asmEOF, Value: ""}}},
+			{instruction: asmLABEL, value: "LOOP"},
+			{instruction: asmEOF, value: ""}}},
 
 	{"A-Instruction only", "@abc123",
 		[]AsmLexeme{
-			{Instruction: asmAINSTRUCT, Value: "abc123"},
-			{Instruction: asmEOF, Value: ""}}},
+			{instruction: asmAINSTRUCT, value: "abc123"},
+			{instruction: asmEOF, value: ""}}},
 
 	{"Single comp instruction", "\n\nD+1",
 		[]AsmLexeme{
-			{Instruction: asmERROR, Value: "Unknown error at line 3 (D+1)"},
-			{Instruction: asmEOF, Value: ""}}},
+			{instruction: asmERROR, value: "Unknown error at line 3 (D+1)"},
+			{instruction: asmEOF, value: ""}}},
 
 	{"Single full instruction", "AMD=D+1;JMP",
 		[]AsmLexeme{
-			{Instruction: asmDEST, Value: "AMD"},
-			{Instruction: asmCOMP, Value: "D+1"},
-			{Instruction: asmJUMP, Value: "JMP"},
-			{Instruction: asmEOF, Value: ""}}},
+			{instruction: asmDEST, value: "AMD"},
+			{instruction: asmCOMP, value: "D+1"},
+			{instruction: asmJUMP, value: "JMP"},
+			{instruction: asmEOF, value: ""}}},
 
 	{"Single full instruction with newlines and comments", "//moose \n   //wibble\n\nD=D&M;JLT\n\n",
 		[]AsmLexeme{
-			{Instruction: asmDEST, Value: "D"},
-			{Instruction: asmCOMP, Value: "D&M"},
-			{Instruction: asmJUMP, Value: "JLT"},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmEOF, Value: ""}}},
+			{instruction: asmDEST, value: "D"},
+			{instruction: asmCOMP, value: "D&M"},
+			{instruction: asmJUMP, value: "JLT"},
+			{instruction: asmEOL, value: ""},
+			{instruction: asmEOF, value: ""}}},
 
 	{"Three instructions.", " D=D+M  \n @123\n  (LOOP)",
 		[]AsmLexeme{
-			{Instruction: asmDEST, Value: "D"},
-			{Instruction: asmCOMP, Value: "D+M"},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmAINSTRUCT, Value: "123"},
-			{Instruction: asmEOL, Value: ""},
-			{Instruction: asmLABEL, Value: "LOOP"},
-			{Instruction: asmEOF, Value: ""}}},
+			{instruction: asmDEST, value: "D"},
+			{instruction: asmCOMP, value: "D+M"},
+			{instruction: asmEOL, value: ""},
+			{instruction: asmAINSTRUCT, value: "123"},
+			{instruction: asmEOL, value: ""},
+			{instruction: asmLABEL, value: "LOOP"},
+			{instruction: asmEOF, value: ""}}},
 }
 
 func TestTheLot(t *testing.T) {
 	for _, asmT := range asmTest {
 		// new lexer
-		_, items := NewLexer(asmT.input)
+		items := newLexer(asmT.input)
 		results := make([]AsmLexeme, 0)
 
 		// collect results

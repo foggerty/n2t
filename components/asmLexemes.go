@@ -18,29 +18,29 @@ const (
 )
 
 type AsmLexeme struct {
-	Instruction AsmInstruction
-	Value       string
-	LineNum     int
+	instruction AsmInstruction
+	value       string
+	lineNum     int
 }
 
 func (l AsmLexeme) String() string {
-	switch l.Instruction {
+	switch l.instruction {
 	case asmEOF:
 		return "EOF"
 	case asmEOL:
-		return fmt.Sprintf("(%d) EOL", l.LineNum)
+		return fmt.Sprintf("(%d) EOL", l.lineNum)
 	case asmAINSTRUCT:
-		return fmt.Sprintf("(%d) @%s", l.LineNum, l.Value)
+		return fmt.Sprintf("(%d) @%s", l.lineNum, l.value)
 	case asmLABEL:
-		return fmt.Sprintf("(%d) (%s)", l.LineNum, l.Value)
+		return fmt.Sprintf("(%d) (%s)", l.lineNum, l.value)
 	case asmDEST:
-		return fmt.Sprintf("(%d) dst - %s", l.LineNum, l.Value)
+		return fmt.Sprintf("(%d) dst - %s", l.lineNum, l.value)
 	case asmJUMP:
-		return fmt.Sprintf("(%d) jmp - %s", l.LineNum, l.Value)
+		return fmt.Sprintf("(%d) jmp - %s", l.lineNum, l.value)
 	case asmCOMP:
-		return fmt.Sprintf("(%d) cmp - %s", l.LineNum, l.Value)
+		return fmt.Sprintf("(%d) cmp - %s", l.lineNum, l.value)
 	case asmERROR:
-		return "ERROR - " + l.Value
+		return "ERROR - " + l.value
 	default:
 		panic("Ohshitohshitohshitohshit")
 	}

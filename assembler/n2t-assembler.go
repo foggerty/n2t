@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	"github.com/foggerty/n2t/components"
 )
 
-// command line options
 var inputFile string
 var outputFile string
 var out *os.File
@@ -33,15 +31,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	in, err := ioutil.ReadFile(inputFile)
-	if err != nil {
-		dumpErr(err)
-		os.Exit(-1)
-	}
+	defer out.Close()
 
-	_, items := components.NewLexer(string(in))
+	components.Assemble(inputFile, out)
+	out.Sync()
 
-	dumpLexemes(items)
+	os.Exit(0)
 }
 
 func defineParams() {
@@ -74,7 +69,11 @@ func setOutput() error {
 	var err error
 	out, err = os.Create(outputFile)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func checkFiles() bool {
@@ -97,8 +96,4 @@ func dumpErr(err error) {
 	fmt.Printf("Something went horribly wrong:\n%q", err)
 }
 
-func dumpLexemes(items <-chan components.AsmLexeme) {
-	for item := range items {
-		fmt.Println(item)
-	}
-}
+//  LocalWords:  outputFile

@@ -29,50 +29,50 @@ import (
 
 */
 
-type SymbolTable struct {
-	variables map[string]int
-	labels    map[string]int
+type symbolTable struct {
+	symbols     map[string]int
+	initialised bool
 }
 
-func NewSymbolTable() SymbolTable {
-	return SymbolTable{
-		variables: make(map[string]int),
-		labels:    make(map[string]int)}
-}
-
-func (st SymbolTable) AddLabel(sym string, mem int) error {
-	return addToMap(st.labels, sym, mem)
-}
-
-func (st SymbolTable) AddVariable(sym string, mem int) error {
-	return addToMap(st.variables, sym, mem)
-}
-
-func addToMap(m map[string]int, s string, i int) error {
-	if _, ok := m[s]; ok {
-		msg := fmt.Sprintf("Internal error - %s has already been added to the table.", s)
-		return errors.New(msg)
+func newSymbolTable() symbolTable {
+	return symbolTable{
+		symbols: make(map[string]int),
 	}
-
-	m[s] = i
-
-	return nil
 }
 
-func (st SymbolTable) LabelLocation(sym string) (int, error) {
-	return location(st.labels, sym)
+func (st symbolTable) addLabel(sym string, mem int) {
+	st.symbols[sym] = mem
 }
 
-func (st SymbolTable) VariableLocation(sym string) (int, error) {
-	return location(st.variables, sym)
+func (st symbolTable) addVariable(sym string) {
+	// To avoid confusion with labels, save with a default of -1.  This
+	// is in case a label @LOOP reference comes before a label (LOOP)
+	// statement.  Note that when a label IS saved, via addLabel(), the
+	// initial value of -1 will be overwritten.
+	st.symbols[sym] = -1
 }
 
-func location(m map[string]int, s string) (int, error) {
-	if res, ok := m[s]; ok {
+func (st symbolTable) symbolValue(sym string) (int, error) {
+	if res, ok := st.symbols[sym]; ok {
+		if res == -1 {
+			panic("PROGRAMMER ERROR! - Symbol table was not initialised.")
+		}
+
 		return res, nil
 	}
 
-	msg := fmt.Sprintf("Internal error - %s not found in the lookup table.", s)
+	msg := fmt.Sprintf("Internal error - %s not found in the lookup table.", sym)
 
 	return 0, errors.New(msg)
+}
+
+func (st symbolTable) init() {
+	mem := 16
+
+	for k, v := range st.symbols {
+		if v == -1 {
+			st.symbols[k] = mem
+			mem++
+		}
+	}
 }

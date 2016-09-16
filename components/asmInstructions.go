@@ -1,4 +1,4 @@
-package main
+package components
 
 ////////////////////////////////////////////////////////////////////////////////
 // All instructions are 16 bits.  Signing doesn't really come into play here,
@@ -7,8 +7,16 @@ package main
 
 type asm uint16
 
-const cInstruction asm = 7 << 13
-const aInstruction asm = 0
+const cInst asm = 7 << 13
+const aInst asm = 0
+
+////////////////////////////////////////////////////////////////////////////////
+// Register constants
+
+var registers = map[string]int{
+	"R01": 1,
+	"R02": 2,
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Literals and map for destination part of instruction.
