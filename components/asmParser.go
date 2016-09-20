@@ -35,11 +35,13 @@ func newParser(i chan AsmLexeme) <-chan asm {
 }
 
 func (p *asmParser) run() {
-	// collect all lexems and build the symbol table (first pass)
+	// collect all lexemes and build the symbol table (first pass)
 	p.buildSymbols()
 
-	// second run, turn into code into an output channel of ints
+	// populate memory locations in symbol table
+	p.initMemory()
 
+	// second pass, turn into code into an output channel of ints
 }
 
 func (p *asmParser) buildSymbols() {
@@ -59,7 +61,7 @@ func (p *asmParser) buildSymbols() {
 			break
 
 		case asmLABEL:
-			p.addLabel(lex.value, line)
+			p.addLabel(lex.value, asm(line))
 
 		case asmAINSTRUCT:
 			if !isInt(lex.value) ||

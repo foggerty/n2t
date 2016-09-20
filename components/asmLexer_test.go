@@ -10,67 +10,67 @@ var asmTest = []struct {
 	expected []AsmLexeme
 }{
 	{"Null input", "",
-		[]AsmLexeme{{instruction: asmEOF, value: ""}}},
+		[]AsmLexeme{
+			{lineNum: 1, instruction: asmEOF, value: ""}}},
 
 	{"Lots o spaces", "        ",
-		[]AsmLexeme{{instruction: asmEOF, value: ""}}},
+		[]AsmLexeme{
+			{lineNum: 1, instruction: asmEOF, value: ""}}},
 
 	{"Lots o comments 1", "// La la\n//woo woo    \n     //Wheee!",
 		[]AsmLexeme{
-			{instruction: asmEOF, value: ""},
-		}},
+			{lineNum: 3, instruction: asmEOF, value: ""}}},
 
 	{"Blank lines", "@1\n@2",
 		[]AsmLexeme{
-			{instruction: asmAINSTRUCT, value: "1"},
-			{instruction: asmEOL, value: ""},
-			{instruction: asmAINSTRUCT, value: "2"},
-			{instruction: asmEOF, value: ""},
-		}},
+			{lineNum: 1, instruction: asmAINSTRUCT, value: "1"},
+			{lineNum: 1, instruction: asmEOL, value: ""},
+			{lineNum: 2, instruction: asmAINSTRUCT, value: "2"},
+			{lineNum: 2, instruction: asmEOF, value: ""}}},
 
 	{"Tabs 'n things", "    \t  \n\n\t   \t\n   \n\n     \t\t   \t \n \n",
 		[]AsmLexeme{
-			{instruction: asmEOF, value: ""}}},
+			{lineNum: 8, instruction: asmEOF, value: ""}}},
 
 	{"Label only", "\n\t(LOOP)",
 		[]AsmLexeme{
-			{instruction: asmLABEL, value: "LOOP"},
-			{instruction: asmEOF, value: ""}}},
+			{lineNum: 2, instruction: asmLABEL, value: "LOOP"},
+			{lineNum: 2, instruction: asmEOF, value: ""}}},
 
 	{"A-Instruction only", "@abc123",
 		[]AsmLexeme{
-			{instruction: asmAINSTRUCT, value: "abc123"},
-			{instruction: asmEOF, value: ""}}},
+			{lineNum: 1, instruction: asmAINSTRUCT, value: "abc123"},
+			{lineNum: 1, instruction: asmEOF, value: ""}}},
 
 	{"Single comp instruction", "\n\nD+1",
 		[]AsmLexeme{
-			{instruction: asmERROR, value: "Unknown error at line 3 (D+1)"},
-			{instruction: asmEOF, value: ""}}},
+			{lineNum: 3, instruction: asmERROR, value: "Unknown error at line 3 (D+1)"},
+			{lineNum: 3, instruction: asmEOF, value: ""}}},
 
 	{"Single full instruction", "AMD=D+1;JMP",
 		[]AsmLexeme{
-			{instruction: asmDEST, value: "AMD"},
-			{instruction: asmCOMP, value: "D+1"},
-			{instruction: asmJUMP, value: "JMP"},
-			{instruction: asmEOF, value: ""}}},
+			{lineNum: 1, instruction: asmDEST, value: "AMD"},
+			{lineNum: 1, instruction: asmCOMP, value: "D+1"},
+			{lineNum: 1, instruction: asmJUMP, value: "JMP"},
+			{lineNum: 1, instruction: asmEOF, value: ""}}},
 
 	{"Single full instruction with newlines and comments", "//moose \n   //wibble\n\nD=D&M;JLT\n\n",
 		[]AsmLexeme{
-			{instruction: asmDEST, value: "D"},
-			{instruction: asmCOMP, value: "D&M"},
-			{instruction: asmJUMP, value: "JLT"},
-			{instruction: asmEOL, value: ""},
-			{instruction: asmEOF, value: ""}}},
+			{lineNum: 4, instruction: asmDEST, value: "D"},
+			{lineNum: 4, instruction: asmCOMP, value: "D&M"},
+			{lineNum: 4, instruction: asmJUMP, value: "JLT"},
+			{lineNum: 4, instruction: asmEOL, value: ""},
+			{lineNum: 6, instruction: asmEOF, value: ""}}},
 
 	{"Three instructions.", " D=D+M  \n @123\n  (LOOP)",
 		[]AsmLexeme{
-			{instruction: asmDEST, value: "D"},
-			{instruction: asmCOMP, value: "D+M"},
-			{instruction: asmEOL, value: ""},
-			{instruction: asmAINSTRUCT, value: "123"},
-			{instruction: asmEOL, value: ""},
-			{instruction: asmLABEL, value: "LOOP"},
-			{instruction: asmEOF, value: ""}}},
+			{lineNum: 1, instruction: asmDEST, value: "D"},
+			{lineNum: 1, instruction: asmCOMP, value: "D+M"},
+			{lineNum: 1, instruction: asmEOL, value: ""},
+			{lineNum: 2, instruction: asmAINSTRUCT, value: "123"},
+			{lineNum: 2, instruction: asmEOL, value: ""},
+			{lineNum: 3, instruction: asmLABEL, value: "LOOP"},
+			{lineNum: 3, instruction: asmEOF, value: ""}}},
 }
 
 func TestTheLot(t *testing.T) {
@@ -90,8 +90,9 @@ func TestTheLot(t *testing.T) {
 }
 
 func checkResults(t *testing.T, name string, expected []AsmLexeme, actual []AsmLexeme) {
-	const lengthMismatch = "%s:\n was expecting to get %d tokens, but got %d."
-	const mismatchedToken = "%s:\n Expected %q but got %q."
+	const lengthMismatch = "%s:\nwas expecting to get %d tokens, but got %d."
+	const mismatchedToken = "%s:\nExpected %q but got %q."
+	const incorrectLineNum = "%s:\nFor instruction %q, expected line number of %d, got %d."
 
 	lenExpected := len(expected)
 	lenActual := len(actual)
@@ -105,6 +106,13 @@ func checkResults(t *testing.T, name string, expected []AsmLexeme, actual []AsmL
 
 		if diff {
 			t.Errorf(mismatchedToken, name, expected[i], actual[i])
+		}
+
+		eL := expected[i].lineNum
+		aL := actual[i].lineNum
+
+		if eL != aL {
+			t.Errorf(incorrectLineNum, name, expected[i], eL, aL)
 		}
 	}
 }

@@ -13,7 +13,7 @@ const aInst asm = 0
 ////////////////////////////////////////////////////////////////////////////////
 // Register constants
 
-var registers = map[string]int{
+var registers = map[string]asm{
 	"R01": 1,
 	"R02": 2,
 }

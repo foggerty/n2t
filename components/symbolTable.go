@@ -30,31 +30,31 @@ import (
 */
 
 type symbolTable struct {
-	symbols     map[string]int
+	symbols     map[string]asm
 	initialised bool
 }
 
 func newSymbolTable() symbolTable {
 	return symbolTable{
-		symbols: make(map[string]int),
+		symbols: make(map[string]asm),
 	}
 }
 
-func (st symbolTable) addLabel(sym string, mem int) {
+func (st symbolTable) addLabel(sym string, mem asm) {
 	st.symbols[sym] = mem
 }
 
 func (st symbolTable) addVariable(sym string) {
 	// To avoid confusion with labels, save with a default of -1.  This
-	// is in case a label @LOOP reference comes before a label (LOOP)
-	// statement.  Note that when a label IS saved, via addLabel(), the
-	// initial value of -1 will be overwritten.
-	st.symbols[sym] = -1
+	// is in case a label reference '@FRED' comes before a label
+	// statement '(FRED)'.  Note that when a label IS saved, via
+	// addLabel(), the initial value of -1 will be overwritten.
+	st.symbols[sym] = 0
 }
 
-func (st symbolTable) symbolValue(sym string) (int, error) {
+func (st symbolTable) symbolValue(sym string) (asm, error) {
 	if res, ok := st.symbols[sym]; ok {
-		if res == -1 {
+		if res == 0 {
 			panic("PROGRAMMER ERROR! - Symbol table was not initialised.")
 		}
 
@@ -66,11 +66,11 @@ func (st symbolTable) symbolValue(sym string) (int, error) {
 	return 0, errors.New(msg)
 }
 
-func (st symbolTable) init() {
-	mem := 16
+func (st symbolTable) initMemory() {
+	var mem asm = 16
 
 	for k, v := range st.symbols {
-		if v == -1 {
+		if v == 0 {
 			st.symbols[k] = mem
 			mem++
 		}

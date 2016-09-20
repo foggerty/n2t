@@ -1,10 +1,13 @@
 #+OPTIONS: toc:nil
 
 * To-Do
-- [ ] Get this org file to export the README section every time it's saved.
 - [X] Get unit tests running inside Emacs.
 - [X] Get gorename tool working (again, inside of Emacs)
-- [ ] Have another look at how things get exported.  i.e. the client apps should only create an assembler fro components, which itself creates a lexer and a parser, but doesn't allow these to be seen in interacted with.
+- [X] Have another look at how things get exported.  i.e. the client apps should only create an assembler fro components, which itself creates a lexer and a parser, but doesn't allow these to be seen in interacted with.
+- [X] Take notes on the two vids on error handling (article?), and nil.
+- [ ] Take notes on the best way to signal errors when communicating via channels.
+- [ ] Check the error handling so far - the components package should NOT call os.Halt() or log.Fatal().  Remember that in Go, errors are values, so just pass them back or collect them and return a wrapped error or anything, really.
+- [ ] Get this org file to export the README section every time it's saved.
 
 * Readme
 A collection of tools for the [[http://nand2tetris.org/][Nand2Tetris project.]]
@@ -21,156 +24,21 @@ Basic assembler that maps symbols/tokens to machine instructions.  Output is a t
 
 ** Compiler
 TBD
-
-* Golang notes
-** Allocation
- - new() :: creates new instance, zeros it, and /returns a pointer./ 
- - make() :: creates new instance, zeros it and /returns the thing itself./  Used for maps, slices and channels *only*:
-
-#+BEGIN_SRC go
-  p := new(chan int)   // p has type: *chan int
-  c := make(chan int)  // c has type: chan int
-#+END_SRC
-
-Also, note that slices maps & channels, are /reference types/, with implicit pointers and aliasing (think objects in Delphi, ahhh those were the days).  i.e. a slice is three words that get passed on the stack, and one of them is a reference to the underling array.
-
-So, given the following struct:
-
-#+BEGIN_SRC go
-  type SymbolTable struct {
-    variables map[string]int
-    labels    map[string]int
-  }
-
-  fred := SymbolTable{}
-  test := fred.values == nil   // TRUE
-
-  ethel := SymbolTable {
-    variables: make(map[string]int),
-    labels: make(map[string]int)}
-
-  test2 := ethel.values == nil  // FALSE
-#+END_SRC
-
-Note that there's no real need to use new.  Instead, use a literal preceded by an '&':
-
-#+BEGIN_SRC go
-  fred := &SymbolTable{}
-#+END_SRC
-
-A pointer to a struct will automatically be dereferenced:
-
-#+BEGIN_SRC go
-  type test struct {
-    name string
-  }
-
-  fred := test{ name: "Fred" }
-  ethel = &fred
-
-  fmt.Printf("No dereferencing required: %s", ethel.name) // "...: Fred"
-#+END_SRC
-
-** Godoc
-*** Writing
-Any comments found immediately before the declaration of a type, variable, constant, function or package, with no intervening blank lines, will extracted.
-
-By convention, make the first word the name of whatever it is that you're documenting, as it will be used as a header:
-
-#+BEGIN_SRC go
-  // Myfunc does "stuff"....
-  func MyFunc()
-#+END_SRC
-
-the above will result in a header "func MyFunc" (in that nice shade of blue that the go team seems to like so much).
-
-Comments elsewhere are ignored, with the exception of ~// BUG(name)~ 
-which will be extracted into the bugs section of the documentation.
-
-URLS - these are converted to links, no markup required.
-
-Pre-formatted text must be indented relative to the surrounding text:
-
-#+BEGIN_SRC go
-// Blah blah
-//   this will be treated a preformatted text
-// More blah blah...
-#+END_SRC
-
-Headers - use something like the following:
-
-#+BEGIN_SRC go
-  /* Blah blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble.
-
-  Some title
-
-  Blah blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble blah thing wobble */
-#+END_SRC
-
-That's pretty much it.
-*** Running as a server
-godoc -http=:6060
-
-Will extract docs from GOROOT etc as far as I can tell, because it also displays any documentation that I apply to public types/functions etc.  This is cool.....
-
-*** Querying
-If invoked with the -q option, (and -server is not specified) godoc will first try loclhost:6060, and then godoc.org.
-
-*** Generation
-Godoc seems to take it straight from the source/package itself, so erm, no generation required?  Index may take a while to build though.  Need to play around with it some more, tis is seriously cool and /very/ well thought out.
-
-*** Example functions
-
-This is awesome!  The following code:
-
-#+BEGIN_SRC go
-  func ExampleMyFunc() {
-    fmt.Println(MyFunc(some, params))
-  }
-#+END_SRC
-
-will generate example code in the docs that users can both edit and run.  Note: must start with 'Example' and take no parameters.
-
-** Unit tests
-Create in the same folder as the package code, with the same name as the file you're writing tests for, with ~_test~ appended to the end of it.  Make sure that it has the same package name.  Tests will not be included in the executable.
-
-In that file, import "testing", and create fun functions like:
-
-#+BEGIN_SRC go
-  package packageName
-
-  import "testing"
-
-  func TestAverage(t *testing.T) { // note the use of camel case!
-    // get some result...
-    if result != expected {
-      t.Error("Expected 3.141, but ", badResult)
-    }
-  }
-#+END_SRC
-
-So no assertions etc, no fluent interfaces.  Although fluent interfaces are a symptom of OO code, so yay, no OO!  Also, testing.T would make sooooooo many C# devs lose their shit.  I mustn't like this language because it would offend enterprise-level purists.....  Shouldn't I?
-
-The ~go test~ command will look for all functions starting with ~Test~ (pascal case FTW) and taking an argument of ~*testing.T~, and run them.  
-
-And that, is pretty much it.
 * Lexer (Assembler)
 - [X] Think about only returning an EOL if have already send an actual instruction?  Flag when encounter instruction, clear when encounter an EOL, and only sed an EOL if the flag is set.
 - [X] Figure out why empty lines are not being counted.
+- [X] See if can get Git to ignore executable files?
 - [X] swear a fuck of a lot more because I forgot that Unix and Windows use different line-ending characters.
 - [X] Figure out why the line numbers are not being recorded correctly.
 - [X] Fix Windows issues (hah!)
+- [X] If /really/ want to, figure out why some test scenarios have an EOL before teh EOF, while others don't.
 - [ ] General tidy (endOfCode can be simplified, i.e. only init should emit EOF)
-- [ ] If /really/ want to, figure out why some test scenarios have an EOL before teh EOF, while others don't.
-- [ ] See if can get Git to ignore executable files?
-
-
 * Parser (Assembler)
 - [X] Set up constants (in map literal) for machine instructions
-- [ ] first loop - go through collecting symbols and adding to symbol table
-- [ ] generate numbers for the symbols
+- [X] first loop - go through collecting symbols and adding to symbol table
+- [X] generate numbers for the symbols
 - [ ] second loop, output ints to a file
 - [ ] test
-
+- [ ] then add error handling (or rewrite!) once I get a good idea of how this all fits together.  i.e. error if an AInstruction if < 0 or > 2^15.  Do this during the symbol building phase, so that writing asm, can just assume that everything is ok.
 
 

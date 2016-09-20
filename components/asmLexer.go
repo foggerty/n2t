@@ -31,7 +31,7 @@ type Lexer struct {
 	width    int            // width of last rune that was read
 	items    chan AsmLexeme // channel on which to pass back the tokens
 	lineNum  int            // current source line number
-	haveComp bool           // true if we've just processed an instruction
+	instruct bool           // true if we've started processing an instruction
 }
 
 // NewLexer returns both a lexer structure, and its output channel, on
@@ -95,12 +95,14 @@ func (l *Lexer) skip(valid string) {
 // emit will thrown the value of pos-start from input onto the output
 // channel
 func (l *Lexer) emit(aI AsmInstruction) {
-	if aI == asmEOL && !l.haveComp {
+	// Want to collapse multiple EOLs, i.e. skip over empty lines and
+	// comments.  So if we're not processing an instruction when we
+	// receive an EOL, keep going but still increment the line count.
+
+	if !l.instruct && aI == asmEOL {
 		l.lineNum++
 		return
 	}
-
-	l.haveComp = aI != asmEOL
 
 	var value string
 
@@ -121,6 +123,7 @@ func (l *Lexer) emit(aI AsmInstruction) {
 
 	l.start = l.pos
 	l.width = 0
+	l.instruct = aI != asmEOL
 }
 
 func (l *Lexer) skipOne() {
@@ -182,7 +185,8 @@ func (l *Lexer) nextRune() rune {
 func (l *Lexer) error() stateFunction {
 	l.items <- AsmLexeme{
 		instruction: asmERROR,
-		value:       fmt.Sprintf("Unknown error at line %d (%s)", l.lineNum, l.input[l.start:l.pos])}
+		value:       fmt.Sprintf("Unknown error at line %d (%s)", l.lineNum, l.input[l.start:l.pos]),
+		lineNum:     l.lineNum}
 
 	return nil
 }
