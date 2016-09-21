@@ -24,18 +24,22 @@ func main() {
 
 	if err := setOutput(); err != nil {
 		dumpErr(err)
-		os.Exit(-1)
+		os.Exit(1)
 	}
 
 	if !checkFiles() {
 		os.Exit(1)
 	}
 
-	defer out.Close()
+	err := components.Assemble(inputFile, out)
 
-	components.Assemble(inputFile, out)
+	if err != nil {
+		os.Exit(-1)
+		// tidy file
+	}
+
 	out.Sync()
-
+	out.Close()
 	os.Exit(0)
 }
 

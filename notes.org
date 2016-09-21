@@ -5,8 +5,10 @@
 - [X] Get gorename tool working (again, inside of Emacs)
 - [X] Have another look at how things get exported.  i.e. the client apps should only create an assembler fro components, which itself creates a lexer and a parser, but doesn't allow these to be seen in interacted with.
 - [X] Take notes on the two vids on error handling (article?), and nil.
-- [ ] Take notes on the best way to signal errors when communicating via channels.
+- [X] Take notes on the best way to signal errors when communicating via channels.
+- [ ] Read up (and take notes) on how the select statement works with channels.  NOTE: Select != Switch, and I'm not sure how I managed to conflate the two in my head.  
 - [ ] Check the error handling so far - the components package should NOT call os.Halt() or log.Fatal().  Remember that in Go, errors are values, so just pass them back or collect them and return a wrapped error or anything, really.
+- [ ] Ensure that the documentation generated for the ~components~ package is showing up in godoc!
 - [ ] Get this org file to export the README section every time it's saved.
 
 * Readme
@@ -37,6 +39,8 @@ TBD
 - [X] Set up constants (in map literal) for machine instructions
 - [X] first loop - go through collecting symbols and adding to symbol table
 - [X] generate numbers for the symbols
+- [ ] rewrite using the same error handling that scanner.Scan() uses
+- [ ] if still not clear, ask on the golang forum
 - [ ] second loop, output ints to a file
 - [ ] test
 - [ ] then add error handling (or rewrite!) once I get a good idea of how this all fits together.  i.e. error if an AInstruction if < 0 or > 2^15.  Do this during the symbol building phase, so that writing asm, can just assume that everything is ok.

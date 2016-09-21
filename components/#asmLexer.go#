@@ -124,16 +124,8 @@ func (l *lexer) skipOne() {
 }
 
 func (l *lexer) skipEol() {
-	n := l.peek()
-
-	if n == "\r" {
-		l.skipOne()
-		l.skipOne()
-	}
-
-	if n == "\n" {
-		l.skipOne()
-	}
+	i := 
+		l.skip("\r\n")
 }
 
 // peek peeks at the next rune, without advancing through the string.

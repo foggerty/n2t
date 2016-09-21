@@ -1,52 +1,48 @@
-/*
-
-  asmParser
-
-  Input: a channel of asmLexemes
-
-  Output: a channel of asm (i.e. 16 bit words, each representing a
-  single instruction).
-
-*/
-
 package components
 
 import (
+	"errors"
+	"fmt"
+	"os"
 	"strconv"
 )
 
 type asmParser struct {
-	items  chan AsmLexeme
+	items  chan asmLexeme
 	output chan asm
 	symbolTable
-	lexemes []AsmLexeme
+	lexemes []asmLexeme
+	errored bool
 }
 
-func newParser(i chan AsmLexeme) <-chan asm {
-	p := asmParser{
-		items:       i,
+func newParser(input chan asmLexeme) (*asmParser, errorList) {
+	parser := asmParser{
+		items:       input,
 		output:      make(chan asm),
 		symbolTable: newSymbolTable(),
 	}
 
-	p.run()
+	// first pass, building symbol table and recording errors
+	errs := parser.buildSymbols()
 
-	return p.output
+	return &parser, errs
 }
 
-func (p *asmParser) run() {
-	// collect all lexemes and build the symbol table (first pass)
-	p.buildSymbols()
+func (p *asmParser) run(f *os.File) errorList {
+	// if errored, we don't write to the file, but do parse the lexemes
+	// looking for additional errors.
 
-	// populate memory locations in symbol table
-	p.initMemory()
+	for lex := range p.lexemes {
+		fmt.Println(lex)
+	}
 
-	// second pass, turn into code into an output channel of ints
+	return nil
 }
 
-func (p *asmParser) buildSymbols() {
-	// To-do: find out what the actual memory offset is
+func (p *asmParser) buildSymbols() errorList {
+	// To-do: find out what the actual instruction memory offset is
 	line := 1
+	var errs []error
 
 	for lex := range p.items {
 		// will need these for the second pass
@@ -54,14 +50,20 @@ func (p *asmParser) buildSymbols() {
 
 		switch lex.instruction {
 
+		case asmERROR:
+			msg := fmt.Sprintf("%q", lex)
+			errs = append(errs, errors.New(msg))
+
 		case asmEOL:
+			// the lexer will compact extra EOL chars, so there will be a
+			// 1-1 relationship between EOL count and instruction memory offset
 			line++
 
 		case asmEOF:
 			break
 
 		case asmLABEL:
-			p.addLabel(lex.value, asm(line))
+			p.addLabel(lex.value, asm(line+1))
 
 		case asmAINSTRUCT:
 			if !isInt(lex.value) ||
@@ -70,6 +72,10 @@ func (p *asmParser) buildSymbols() {
 			}
 		}
 	}
+
+	p.errored = errs != nil
+
+	return errs
 }
 
 func isInt(s string) bool {
