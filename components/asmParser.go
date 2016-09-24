@@ -15,6 +15,8 @@ type asmParser struct {
 	errored bool
 }
 
+const maxConst = 32768 // 2^15
+
 func newParser(input chan asmLexeme) (*asmParser, errorList) {
 	parser := asmParser{
 		items:       input,
@@ -24,6 +26,8 @@ func newParser(input chan asmLexeme) (*asmParser, errorList) {
 
 	// first pass, building symbol table and recording errors
 	errs := parser.buildSymbols()
+	parser.witeMem()
+	parser.errored = errs != nil
 
 	return &parser, errs
 }
@@ -32,11 +36,63 @@ func (p *asmParser) run(f *os.File) errorList {
 	// if errored, we don't write to the file, but do parse the lexemes
 	// looking for additional errors.
 
-	for lex := range p.lexemes {
-		fmt.Println(lex)
+	for key, value := range p.symbols {
+		fmt.Printf("%s - %d\n", key, value)
+	}
+
+	var i asm
+	var err error
+	var errors []error
+
+	for _, lex := range p.lexemes {
+
+		switch lex.instruction {
+		case asmAINSTRUCT:
+			i, err = p.mapToA(lex)
+		default:
+			continue
+		}
+
+		if err != nil {
+			errors = append(errors, err)
+			continue
+		}
+
+		if !p.errored {
+			fmt.Fprintf(f, "%.16b\n", i)
+		}
 	}
 
 	return nil
+}
+
+func (p *asmParser) mapToA(l asmLexeme) (asm, error) {
+	// is it a constant?
+	if c, err := strconv.Atoi(l.value); err == nil {
+		// and is it within the allowed range? (0 - 2^15)
+		if c >= 0 && c <= maxConst {
+			return aInst | asm(c), nil
+		}
+
+		return 0, fmt.Errorf("Constant value out of range: %s", l.value)
+	}
+
+	// does the value exist in the symbol table?
+	if sym, err := p.symbolValue(l.value); err == nil {
+		return aInst | sym, nil
+	}
+
+	// is it a register?
+	if reg, ok := registers[l.value]; ok {
+		return aInst | reg, nil
+	}
+
+	// is it a predefined pointer?
+	if ptr, ok := pointers[l.value]; ok {
+		return aInst | ptr, nil
+	}
+
+	return asm(0), fmt.Errorf("Unrecognised value for A-Instruction: %s", l.value)
 }
 
 func (p *asmParser) buildSymbols() errorList {
@@ -63,7 +119,7 @@ func (p *asmParser) buildSymbols() errorList {
 			break
 
 		case asmLABEL:
-			p.addLabel(lex.value, asm(line+1))
+			p.addLabel(lex.value, asm(line-1))
 
 		case asmAINSTRUCT:
 			if !isInt(lex.value) ||
@@ -72,8 +128,6 @@ func (p *asmParser) buildSymbols() errorList {
 			}
 		}
 	}
-
-	p.errored = errs != nil
 
 	return errs
 }

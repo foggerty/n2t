@@ -9,6 +9,10 @@ import (
 type errorList []error
 
 func (errs errorList) asError() error {
+	if len(errs) == 0 {
+		return nil
+	}
+
 	var results []string
 
 	for e := range errs {

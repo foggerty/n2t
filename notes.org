@@ -39,8 +39,7 @@ TBD
 - [X] Set up constants (in map literal) for machine instructions
 - [X] first loop - go through collecting symbols and adding to symbol table
 - [X] generate numbers for the symbols
-- [ ] rewrite using the same error handling that scanner.Scan() uses
-- [ ] if still not clear, ask on the golang forum
+- [ ] BUG! - symbol table: default for variable is a legit instruction memory address.
 - [ ] second loop, output ints to a file
 - [ ] test
 - [ ] then add error handling (or rewrite!) once I get a good idea of how this all fits together.  i.e. error if an AInstruction if < 0 or > 2^15.  Do this during the symbol building phase, so that writing asm, can just assume that everything is ok.

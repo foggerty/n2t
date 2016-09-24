@@ -23,7 +23,7 @@ func main() {
 	}
 
 	if err := setOutput(); err != nil {
-		dumpErr(err)
+		dumpErr("Error setting output.", err)
 		os.Exit(1)
 	}
 
@@ -34,6 +34,7 @@ func main() {
 	err := components.Assemble(inputFile, out)
 
 	if err != nil {
+		dumpErr("Error when assembling.", err)
 		os.Exit(-1)
 		// tidy file
 	}
@@ -96,8 +97,8 @@ func showHelp() {
 	fmt.Println()
 }
 
-func dumpErr(err error) {
-	fmt.Printf("Something went horribly wrong:\n%q", err)
+func dumpErr(msg string, err error) {
+	fmt.Printf("Something went horribly wrong:\n%s\n%q", msg, err)
 }
 
 //  LocalWords:  outputFile

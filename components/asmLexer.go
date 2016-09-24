@@ -254,7 +254,6 @@ func (l *lexer) noCapture() bool {
 // General "move forward until we find something useful" function.
 // Makes no assumptions about where it is.
 func initState(l *lexer) stateFunction {
-	_ = "breakpoint"
 	l.skip(" \t")
 
 	if l.atEol() {

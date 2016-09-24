@@ -1,9 +1,16 @@
 package components
 
 import "os"
+import "io/ioutil"
 
 func Assemble(in string, out *os.File) error {
-	input := "" // load from disk
+	b, err := ioutil.ReadFile(in)
+
+	if err != nil {
+		return err
+	}
+
+	input := string(b)
 
 	// Create a Lexer, it will kick off the lexing in a go routine
 	lexChan := newLexer(input)
