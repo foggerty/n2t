@@ -26,23 +26,21 @@ func newParser(input chan asmLexeme) (*asmParser, errorList) {
 
 	// first pass, building symbol table and recording errors
 	errs := parser.buildSymbols()
-	parser.witeMem()
 	parser.errored = errs != nil
+	parser.witeMem()
 
 	return &parser, errs
 }
 
 func (p *asmParser) run(f *os.File) errorList {
-	// if errored, we don't write to the file, but do parse the lexemes
-	// looking for additional errors.
+	var errs []error
 
-	for key, value := range p.symbols {
-		fmt.Printf("%s - %d\n", key, value)
+	if p.errored {
+		return append(errs, errors.New("Cannot parse - errors found by lexer"))
 	}
 
 	var i asm
 	var err error
-	var errors []error
 
 	for _, lex := range p.lexemes {
 
@@ -54,16 +52,14 @@ func (p *asmParser) run(f *os.File) errorList {
 		}
 
 		if err != nil {
-			errors = append(errors, err)
+			errs = append(errs, err)
 			continue
 		}
 
-		if !p.errored {
-			fmt.Fprintf(f, "%.16b\n", i)
-		}
+		fmt.Fprintf(f, "%.16b\n", i)
 	}
 
-	return nil
+	return errs
 }
 
 func (p *asmParser) mapToA(l asmLexeme) (asm, error) {

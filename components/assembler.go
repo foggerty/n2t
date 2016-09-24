@@ -23,11 +23,13 @@ func Assemble(in string, out *os.File) error {
 	// there's no benefit running the second phase concurrently.
 	parser, errs := newParser(lexChan)
 
-	// Append errors found (if any) while parsing.  Note that the parser
-	// will not write to the file if any errors were found during the
-	// lexing phase, and will stop writing after the first error that it
-	// encounters.  It is up to the calling routine to tidy the file.
-	errs = append(errs, parser.run(out)...)
+	if errs != nil {
+		return errs.asError()
+	}
 
-	return errs.asError()
+	// Note that the parser will not write to the file if any errors
+	// were found during the lexing phase, and will stop writing after
+	// the first error that it encounters.  It is up to the calling
+	// routine to tidy the file.
+	return parser.run(out).asError()
 }

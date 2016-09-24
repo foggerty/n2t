@@ -59,7 +59,8 @@ func (st *symbolTable) witeMem() {
 	}
 }
 
-// Will always know the value of a label
+// Will always know the value of a label, and will overwrite any
+// mistaken "variables" previously written (that will be -1)
 func (st *symbolTable) addLabel(s string, m asm) {
 	st.symbols[s] = int(m)
 }
