@@ -9,9 +9,13 @@ function run() {
 
 pushd ~/go/src/github.com/foggerty/n2t
 
+echo Building:
 go build -v ./...
+echo Vet:
 run go vet ./...
+echo Test:
 run go test ./...
+echo Install:
 run go install ./...
 
 popd

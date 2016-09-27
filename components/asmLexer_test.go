@@ -44,7 +44,7 @@ var asmTest = []struct {
 
 	{"Single comp instruction", "\n\nD+1",
 		[]asmLexeme{
-			{lineNum: 3, instruction: asmERROR, value: "Unknown error at line 3 (D+1)"},
+			{lineNum: 3, instruction: asmERROR, value: "Unknown error at line 3: (D+1)"},
 			{lineNum: 3, instruction: asmEOF, value: ""}}},
 
 	{"Single full instruction", "AMD=D+1;JMP",

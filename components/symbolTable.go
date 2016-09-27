@@ -33,13 +33,11 @@ import (
 type symbolTable struct {
 	symbols     map[string]int
 	initialised bool
-	mem         asm
 }
 
 func newSymbolTable() symbolTable {
 	return symbolTable{
 		symbols: make(map[string]int),
-		mem:     16,
 	}
 }
 
@@ -57,6 +55,8 @@ func (st *symbolTable) witeMem() {
 			mem++
 		}
 	}
+
+	st.initialised = true
 }
 
 // Will always know the value of a label, and will overwrite any
@@ -74,6 +74,10 @@ func (st *symbolTable) addVariable(s string) {
 }
 
 func (st *symbolTable) symbolValue(s string) (asm, error) {
+	if !st.initialised {
+		return 0, errors.New("DEVELOPER ERROR - you need to call writeMem() before calling symbolValue().")
+	}
+
 	if res, ok := st.symbols[s]; ok {
 		return asm(res), nil
 	}

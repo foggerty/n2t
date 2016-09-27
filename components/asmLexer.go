@@ -176,9 +176,29 @@ func (l *lexer) nextRune() rune {
 // Just emits an error lexeme.
 
 func (l *lexer) error() {
+	// just dump the entire line
+	start := l.start
+
+	for start > 0 {
+		if string(l.input[start]) == "\n" {
+			break
+		}
+		start--
+	}
+
+	end := strings.IndexAny(l.input[l.start:], "\r\n")
+
+	if end == -1 {
+		end = len(l.input)
+	} else {
+		end += l.start
+	}
+
+	badLine := strings.Trim(l.input[start:end], "\r\n\t ")
+
 	l.items <- asmLexeme{
 		instruction: asmERROR,
-		value:       fmt.Sprintf("Unknown error at line %d (%s)", l.lineNum, l.input[l.start:l.pos]),
+		value:       fmt.Sprintf("Unknown error at line %d: (%s)", l.lineNum, badLine),
 		lineNum:     l.lineNum}
 }
 

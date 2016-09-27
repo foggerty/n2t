@@ -1,7 +1,9 @@
 package components
 
-import "os"
-import "io/ioutil"
+import (
+	"io/ioutil"
+	"os"
+)
 
 func Assemble(in string, out *os.File) error {
 	b, err := ioutil.ReadFile(in)
@@ -27,9 +29,7 @@ func Assemble(in string, out *os.File) error {
 		return errs.asError()
 	}
 
-	// Note that the parser will not write to the file if any errors
-	// were found during the lexing phase, and will stop writing after
-	// the first error that it encounters.  It is up to the calling
-	// routine to tidy the file.
+	// Note that the parser will stop writing after the first error that
+	// it encounters.  It is up to the calling routine to tidy the file.
 	return parser.run(out).asError()
 }

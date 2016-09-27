@@ -2,7 +2,6 @@ package components
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -15,8 +14,8 @@ func (errs errorList) asError() error {
 
 	var results []string
 
-	for e := range errs {
-		results = append(results, fmt.Sprintf("%q\n", e))
+	for _, e := range errs {
+		results = append(results, e.Error())
 	}
 
 	result := strings.Join(results, "\n")

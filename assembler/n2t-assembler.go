@@ -35,7 +35,7 @@ func main() {
 
 	if err != nil {
 		dumpErr("Error when assembling.", err)
-		os.Exit(-1)
+		os.Exit(1)
 		// tidy file
 	}
 
@@ -98,7 +98,7 @@ func showHelp() {
 }
 
 func dumpErr(msg string, err error) {
-	fmt.Printf("Something went horribly wrong:\n%s\n%q", msg, err)
+	fmt.Printf("Something went horribly wrong:\n%s\n%s\n", msg, err.Error())
 }
 
 //  LocalWords:  outputFile
