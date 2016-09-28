@@ -1,4 +1,5 @@
-   @24576			// last word of screen memory + 1
+	@123	
+  @24576			// last word of screen memory + 1
    D=A				// set it to D
    @screen-end			// RAM[16]
    M=D				// write 24755 to RAM[16]
@@ -9,11 +10,12 @@
    M=D				// assign SCREEN (begining address) to it
    @KBD
    D=M
-   @key-pressed
+   @key-pressed // key-pressed
    M=D
    @mask
    M=0
-   @MASK-ON
+@456
+	@MASK-ON
    D;JNE
    @DRAW
    0;JMP

@@ -15,7 +15,9 @@ import (
 type stateFunction func(*lexer) stateFunction
 
 // Lexer tracks the progress as the lexer process moves through the
-// input string.
+// input string.  Todo - 'instruct' should be inferred by the current
+// state function somehow and maybe passed in to the emit function,
+// this is brittle code.
 type lexer struct {
 	input    string         // entire source file, not bothering with streaming (for now)
 	start    int            // start of current item in bytes, NOT characters
@@ -74,7 +76,7 @@ func (l *lexer) skip(valid string) {
 	l.start = l.pos
 	next := l.peek()
 
-	// it turns out that Go, C# and Ruby all think that ANY string
+	// it turns out that Go, C# and Ruby all think that ALL strings
 	// contains the empty string.  So I figure this must be pretty much
 	// language-standard.  Doh :-)
 
@@ -198,7 +200,7 @@ func (l *lexer) error() {
 
 	l.items <- asmLexeme{
 		instruction: asmERROR,
-		value:       fmt.Sprintf("Unknown error at line %d: (%s)", l.lineNum, badLine),
+		value:       fmt.Sprintf("Unknown error at line %d: %s", l.lineNum, badLine),
 		lineNum:     l.lineNum}
 }
 

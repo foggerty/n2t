@@ -15,6 +15,7 @@ const (
 	asmEOL                             // end of line, marks end of instruction
 	asmEOF                             // end of file
 	asmERROR                           // something went horribly wrong
+	asmNULL                            // used to track last instruction
 )
 
 type asmLexeme struct {

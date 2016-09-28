@@ -27,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if !checkFiles() {
+	if !checkInput() {
 		os.Exit(1)
 	}
 
@@ -35,8 +35,8 @@ func main() {
 
 	if err != nil {
 		dumpErr("Error when assembling.", err)
+		deleteOutput()
 		os.Exit(1)
-		// tidy file
 	}
 
 	out.Sync()
@@ -81,7 +81,7 @@ func setOutput() error {
 	return nil
 }
 
-func checkFiles() bool {
+func checkInput() bool {
 	if _, err := os.Stat(inputFile); err == nil {
 		return true
 	}
@@ -93,7 +93,9 @@ func checkFiles() bool {
 func showHelp() {
 	fmt.Printf("\nNand2Tetris assembler.\n=====================\n\n")
 	fmt.Printf("Usage:\n")
+
 	flag.PrintDefaults()
+
 	fmt.Println()
 }
 
@@ -101,4 +103,12 @@ func dumpErr(msg string, err error) {
 	fmt.Printf("Something went horribly wrong:\n%s\n%s\n", msg, err.Error())
 }
 
-//  LocalWords:  outputFile
+func deleteOutput() {
+	if out != nil {
+		out.Close()
+	}
+
+	if _, exists := os.Stat(outputFile); !os.IsNotExist(exists) {
+		os.Remove(outputFile)
+	}
+}

@@ -35,6 +35,7 @@ func newParser(input chan asmLexeme) (*asmParser, errorList) {
 // we're not going to get more than one jmp per line etc, or more than
 // three parts (d=c;j) per line.  So this isn't really a parser, it
 // just maps instruction mnemonics.
+// Will stop writing to file at the first error.
 func (p *asmParser) run(f *os.File) errorList {
 	var errs []error
 
@@ -58,10 +59,12 @@ Loop:
 			break Loop
 
 		case asmEOL:
-			if err == nil {
-				fmt.Fprintf(f, "%.16b\n", i)
-			} else {
+			if err != nil {
 				errs = append(errs, err)
+			}
+
+			if errs == nil {
+				fmt.Fprintf(f, "%.16b\n", i)
 			}
 
 			i = 0
@@ -69,6 +72,12 @@ Loop:
 			// A - Instructions
 
 		case asmAINSTRUCT:
+			prev := p.previousInstruction(index)
+
+			if prev.instruction == asmAINSTRUCT {
+				fmt.Fprintf(os.Stderr, "WARNING - redundant loading of A-Register on line %d\n", prev.lineNum)
+			}
+
 			i, err = p.mapToA(lex)
 
 		case asmLABEL:
@@ -94,6 +103,23 @@ Loop:
 	}
 
 	return errs
+}
+
+// 0 1(EOF) 2 3
+func (p *asmParser) previousInstruction(index int) asmLexeme {
+	nil := asmLexeme{instruction: asmNULL}
+
+	if index-2 < 0 {
+		return nil
+	}
+
+	previous := p.lexemes[index-1]
+
+	if previous.instruction == asmEOL {
+		previous = p.lexemes[index-2]
+	}
+
+	return previous
 }
 
 func printInstruction(i asm, err error, f *os.File) {
@@ -132,8 +158,7 @@ func (p *asmParser) mapToA(l asmLexeme) (asm, error) {
 }
 
 func (p *asmParser) buildSymbols() errorList {
-	// To-do: find out what the actual instruction memory offset is
-	line := 0
+	pCount := 0 // instruction memory counter
 	var errs []error
 	var foundComp bool
 
@@ -154,7 +179,7 @@ func (p *asmParser) buildSymbols() errorList {
 
 		case asmEOL:
 			if foundComp {
-				line++
+				pCount++
 				foundComp = false
 			}
 
@@ -162,10 +187,10 @@ func (p *asmParser) buildSymbols() errorList {
 			break
 
 		case asmLABEL:
-			p.addLabel(lex.value, asm(line))
+			p.addLabel(lex.value, asm(pCount))
 
 		case asmAINSTRUCT:
-			line++
+			pCount++
 			if !isInt(lex.value) ||
 				!isRegister(lex.value) {
 				p.addVariable(lex.value)

@@ -22,3 +22,19 @@ func (errs errorList) asError() error {
 
 	return errors.New(result)
 }
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+
+	return y
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+
+	return y
+}

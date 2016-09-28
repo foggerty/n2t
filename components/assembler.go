@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+// Will take a Hack assembler file (.asm) and writes to out, the
+// "binary" machine codes.
 func Assemble(in string, out *os.File) error {
 	b, err := ioutil.ReadFile(in)
 
@@ -22,7 +24,7 @@ func Assemble(in string, out *os.File) error {
 	// found by the lexer.  i.e. the lexr and the first pass will be run
 	// concurrently, but since we cannot move onto the second pass
 	// (parsing the tokens and writing the file) until that's complete,
-	// there's no benefit running the second phase concurrently.
+	// there's no benefit to running the second phase concurrently.
 	parser, errs := newParser(lexChan)
 
 	if errs != nil {
