@@ -87,6 +87,7 @@ var jmpMap = map[string]asm{
 	"null": jmpNull,
 	"JGT":  jmpGE,
 	"JEQ":  jmpEQ,
+	"JGE":  jmpGE,
 	"JLT":  jmpLT,
 	"JNE":  jmpNE,
 	"JLE":  jmpLE,
