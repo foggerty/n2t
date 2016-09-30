@@ -1,14 +1,9 @@
 package components
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 	"unicode/utf8"
 )
-
-////////////////////////////////////////////////////////////////////////////////
-// Public
 
 // StateFunction represents the lexer's current 'state'.  i.e. are we
 // at the beginning of an A-instruction, a label or a C-Instruction.
@@ -46,7 +41,7 @@ func newLexer(input string) chan asmLexeme {
 func (l *lexer) run() {
 	defer close(l.items)
 
-	state := initState(l)
+	state := initState
 
 	for state != nil {
 		state = state(l)
@@ -60,361 +55,284 @@ const validSymbol string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
 const validInstruction string = "-+01!AMD&|nullJGELMNTQEP"
 
 ////////////////////////////////////////////////////////////////////////////////
-// helper routines
+// Helper functions
+////////////////////////////////////////////////////////////////////////////////
 
-func (l *lexer) accept(valid string) {
-	next := l.nextRune()
-
-	for strings.ContainsRune(valid, next) {
-		next = l.nextRune()
-	}
-
-	l.rewind()
+// True if at EOF
+func (l *lexer) atEOF() bool {
+	return l.pos >= len(l.input) || l.input == ""
 }
 
-func (l *lexer) skip(valid string) {
-	l.start = l.pos
-	next := l.peek()
-
-	// it turns out that Go, C# and Ruby all think that ALL strings
-	// contains the empty string.  So I figure this must be pretty much
-	// language-standard.  Doh :-)
-
-	for strings.Contains(valid, next) && next != "" {
-		l.skipOne()
-		next = l.peek()
-	}
-}
-
-// emit will thrown the value of pos-start from input onto the output
-// channel
-func (l *lexer) emit(aI asmInstruction) {
-	// Want to collapse multiple EOLs, i.e. skip over empty lines and
-	// comments.  So if we're not processing an instruction when we
-	// receive an EOL, keep going but still increment the line count.
-
-	if !l.instruct && aI == asmEOL {
-		l.lineNum++
-		return
-	}
-
-	var value string
-
-	if aI == asmEOF || aI == asmEOL {
-		value = ""
-	} else {
-		value = l.input[l.start:l.pos]
-	}
-
-	l.items <- asmLexeme{
-		instruction: aI,
-		value:       value,
-		lineNum:     l.lineNum}
-
-	if aI == asmEOL {
-		l.lineNum++
-	}
-
-	l.start = l.pos
-	l.width = 0
-	l.instruct = aI != asmEOL
-}
-
-func (l *lexer) skipOne() {
-	l.nextRune()
-	l.start = l.pos
-}
-
-func (l *lexer) skipEol() {
-	n := l.peek()
-
-	if n == "\r" {
-		l.skipOne()
-		l.skipOne()
-	}
-
-	if n == "\n" {
-		l.skipOne()
-	}
-}
-
-// peek peeks at the next rune, without advancing through the string.
-func (l *lexer) peek() string {
-	if l.atEof() {
-		return ""
-	}
-
-	result := l.nextRune()
-	l.rewind()
-
-	return string(result)
-}
-
-// peeks at the next x runes
-func (l *lexer) peekAt(x int) string {
-	current := l.pos
-	var result string
-
-	for x > 0 {
-		rune, width := utf8.DecodeRuneInString(l.input[current:])
-		result += string(rune)
-		current += width
-		x--
-	}
-
-	return result
-}
-
-// nextRune returns the next rune in input, moving forward.
-func (l *lexer) nextRune() rune {
-	rune, width := utf8.DecodeRuneInString(l.input[l.pos:])
-
-	l.pos += width
-	l.width = width
-
-	return rune
-}
-
-// Just emits an error lexeme.
-
-func (l *lexer) error() {
-	// just dump the entire line
-	start := l.start
-
-	for start > 0 {
-		if string(l.input[start]) == "\n" {
-			break
-		}
-		start--
-	}
-
-	end := strings.IndexAny(l.input[l.start:], "\r\n")
-
-	if end == -1 {
-		end = len(l.input)
-	} else {
-		end += l.start
-	}
-
-	badLine := strings.Trim(l.input[start:end], "\r\n\t ")
-
-	l.items <- asmLexeme{
-		instruction: asmERROR,
-		value:       fmt.Sprintf("Unknown error at line %d: %s", l.lineNum, badLine),
-		lineNum:     l.lineNum}
-}
-
-// atEof ....  Pretty sure you can figure this one out.
-func (l *lexer) atEof() bool {
-	return l.pos >= len(l.input)
-}
-
-// True if next rune is \n, otherwise false.
-func (l *lexer) atEol() bool {
-	if l.atEof() {
-		return false
-	}
-
+func (l *lexer) atEOL() bool {
 	next := l.peek()
 
 	return next == "\r" || next == "\n"
 }
 
-func (l *lexer) moveToEol() {
-	// first check that there is an EOL
-	i := strings.Index(l.input[l.pos:], "\r")
-
-	if i == -1 {
-		i = strings.Index(l.input[l.pos:], "\n")
+// True if sitting at the beginning of a comment.
+func (l *lexer) atComment() bool {
+	if l.pos < len(l.input)-2 {
+		return "//" == l.input[l.pos:l.pos+2]
 	}
 
-	// is this the last line?
-	if i == -1 {
-		// move to EOF
-		i = len(l.input)
-	} else {
-		i += l.pos
-	}
-
-	l.start, l.pos = i, i
+	return false
 }
 
-// rewind moves back to the previous rune.
+// Starting from current position, look for the next ';', '=', '@' or
+// '(' up to either EOL or EOF.  If there isn't one, returns empty
+// string.
+func (l *lexer) nextSeparator() string {
+	i := strings.IndexAny(l.input[l.pos:], ";=(@")
+
+	if i == -1 {
+		return ""
+	}
+
+	i += l.pos
+
+	// test to see if separator is on the following line
+	iEol := l.nextEol() + l.pos
+
+	if iEol-i < 0 {
+		return ""
+	}
+
+	return l.input[i : i+1]
+}
+
+// Return the entire line (i.e. back from start to the next EOL/BOF,
+// forward toward the next EOL/EOF).
+func (l *lexer) currentLine() string {
+	var start int
+	end := l.nextEol()
+
+	if l.lineNum == 1 {
+		start = 0
+	} else {
+		// For linenum to be anything but 1, a EOL has to have been
+		// processed.
+		start = l.start - 1
+		for {
+			test := l.input[start : start+1]
+			if test == "\n" {
+				start++
+				break
+			}
+			start--
+		}
+	}
+
+	return l.input[start:end]
+}
+
+// Returns index of next EOL character, or EOF position if none found
+func (l *lexer) nextEol() int {
+	i := strings.IndexAny(l.input[l.pos:], "\r\n")
+
+	if i == -1 {
+		return len(l.input)
+	}
+
+	return l.pos + i
+}
+
+// Puts current selection onto the output channel.
+// Note that ONLY state functions should be calling this.
+func (l *lexer) emit(i asmInstruction) {
+	var value string
+
+	switch i {
+	case asmEOL:
+		fallthrough
+	case asmEOF:
+		value = ""
+	case asmERROR:
+		value = l.currentLine()
+	default:
+		value = l.input[l.start:l.pos]
+	}
+
+	lex := asmLexeme{
+		lineNum:     l.lineNum,
+		instruction: i,
+		value:       value,
+	}
+
+	l.items <- lex
+
+	if i == asmEOL {
+		l.lineNum++
+	}
+}
+
+// Skips over white space and comment until EOL or EOF.
+func (l *lexer) skipWhiteSpace() {
+	for {
+		l.skipChars(" \t")
+
+		if l.atComment() {
+			l.skipToEol()
+			continue
+		}
+
+		break
+	}
+}
+
+// Moves both start and pos forward until EOL or EOF.
+func (l *lexer) skipToEol() {
+	// position of next EOL
+	i := l.nextEol()
+	l.pos = i
+	l.start = i
+}
+
+// Skips past characters, moving pos and start forward.
+func (l *lexer) skipChars(chars string) {
+	for {
+		next := l.next()
+
+		if !strings.ContainsAny(next, chars) || next == "" {
+			l.rewind()
+			break
+		}
+
+		l.ignore()
+	}
+}
+
+// Assumes at EOL
+func (l *lexer) skipEol() {
+	next := l.next()
+
+	if next == "\r" {
+		l.skipOne()
+	}
+
+	l.ignore()
+}
+
+func (l *lexer) skipOne() {
+	l.next()
+	l.ignore()
+}
+
+// Reads and returns next rune as a string.
+func (l *lexer) next() string {
+	next, width := utf8.DecodeRuneInString(l.input[l.pos:])
+
+	l.pos += width
+	l.width = width
+
+	return string(next)
+}
+
+// Rewinds pos back by the width of the last rune read.
 func (l *lexer) rewind() {
 	l.pos -= l.width
 	l.width = 0
 }
 
-// RewindTo rewinds BOTH pos and start to a set location.
-func (l *lexer) rewindTo(p int) error {
-	if p < l.start {
-		return errors.New("Attempted to rewind past start")
-	}
-
-	l.pos = p
-
-	return nil
+// Moves pos up to start, ignoring runes in between.
+func (l *lexer) ignore() {
+	l.start = l.pos
 }
 
-func (l *lexer) atBeginComment() bool {
-	if l.atEof() {
-		return false
+// Moves pos forward over accepted characters.
+func (l *lexer) accept(chars string) {
+	next := l.next()
+
+	for {
+		if !strings.ContainsAny(chars, next) {
+			break
+		}
+
+		next = l.next()
 	}
 
-	test := l.peekAt(2)
-
-	return test == "//"
+	l.rewind()
 }
 
-func (l *lexer) noCapture() bool {
-	return (l.pos - l.start) == 0
+// True if pos has not advanced past start.
+func (l *lexer) nothingFound() bool {
+	return l.pos-l.start <= 0
+}
+
+// Returns next rune as a sting, or empty string if EOF
+func (l *lexer) peek() string {
+	if l.atEOF() {
+		return ""
+	}
+
+	next := l.next()
+	l.rewind()
+
+	return string(next)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// State functions
+// State Functions
+////////////////////////////////////////////////////////////////////////////////
 
-// General "move forward until we find something useful" function.
-// Makes no assumptions about where it is.
+// Skips leading white space, comments and newlines until we reach what is
+// hopefully code.
 func initState(l *lexer) stateFunction {
-	l.skip(" \t")
+	l.skipWhiteSpace()
 
-	if l.atEol() {
-		l.skipEol()
+	if l.atEOF() {
+		l.emit(asmEOF)
+		return nil
+	}
+
+	if l.atEOL() {
 		l.emit(asmEOL)
-
+		l.skipEol()
 		return initState
 	}
 
-	if l.atEof() {
-		l.emit(asmEOF)
-		return nil
-	}
+	// determine what we're looking at
+	next := l.nextSeparator()
 
-	for l.atBeginComment() {
-		l.moveToEol()
-		return initState
-	}
-
-	next := l.peek()
-
-	if next == "@" {
-		l.skipOne()
-		return aInstruction
-	}
-
-	if next == "(" {
-		l.skipOne()
+	switch next {
+	case "=":
+		// instruction has a DEST part
+		return atDest
+	case ";":
+		// only COMP & JMP
+		return atComp
+	case "(":
+		// at a label
 		return atLabel
+	case "@":
+		return atAInstruct
+	default:
+		// anything else must be an error
+		return errorState
 	}
-
-	return atCInstruction
 }
 
-// Moves to the EOL.
-// Assumes that at the end of an instruction or a symbol, so
-// anything other than white space or a comment before EOL or EOF
-// is an error.
-func endOfCode(l *lexer) stateFunction {
-	l.skip(" \t")
-
-	if l.atEof() {
-		l.emit(asmEOF)
-		return nil
-	}
-
-	if l.atBeginComment() {
-		l.moveToEol()
-		return initState
-	}
-
+// Assumes we're at the beginning of the CMP part of an instruction.
+func atDest(l *lexer) stateFunction {
+	l.accept(validInstruction)
 	next := l.peek()
 
-	if next == "\r" || next == "\n" {
-		return initState
+	if l.nothingFound() || next != "=" {
+		return errorState
 	}
 
-	return errState
+	l.emit(asmDEST)
+
+	// move past '='
+	l.skipOne()
+
+	return atComp
 }
 
-// Handles A-instructions (@123 / @loop)
-// Assumes that it is positioned just after the '@'.
-func aInstruction(l *lexer) stateFunction {
-	l.accept(validSymbol)
-
-	if l.noCapture() {
-		return errState
-	}
-
-	l.emit(asmAINSTRUCT)
-
-	return endOfCode
-}
-
-// Handles labels i.e. (LOOP)
-// Assumes that it is positioned just after the opening '('
-func atLabel(l *lexer) stateFunction {
-	l.accept(validSymbol)
-
-	next := l.peek()
-
-	if l.noCapture() || next != ")" {
-		return errState
-	}
-
-	l.emit(asmLABEL)
-	l.skipOne() // step over the closing ')'
-
-	return endOfCode
-}
-
-// Handles C-Instructions.
-// Note that there are four ways this can be represented:
-//
-//    d=c;j
-//    d=c
-//    c;j
-//    c
-//
-// this will figure out in which situation we're in, and set the next
-// state accordingly.
-//
-// Assumes that it's at the beginning of some text.  Hopefully
-// it's a C-Instruction.
-func atCInstruction(l *lexer) stateFunction {
+func atComp(l *lexer) stateFunction {
 	l.accept(validInstruction)
 
-	if l.noCapture() {
-		return errState
-	}
-
-	next := l.peek()
-
-	// destination part of d=c;j
-	if next == "=" {
-		l.emit(asmDEST)
-		l.skipOne()
-		return atCmp
-	}
-
-	// comp part of c;j
-	if next == ";" {
-		l.emit(asmCOMP)
-		l.skipOne()
-		return atJmp
-	}
-
-	// This may be a comp instruction, but by itself that does nothing
-	// other than burn cycles.
-	return errState
-}
-
-// Handles the 'c' part of a C-Instruction (d=c;j)
-// Assumes positioned immediately after the '='.
-func atCmp(l *lexer) stateFunction {
-	l.accept(validInstruction)
-
-	if l.noCapture() {
-		return errState
+	if l.nothingFound() {
+		return errorState
 	}
 
 	l.emit(asmCOMP)
@@ -422,39 +340,73 @@ func atCmp(l *lexer) stateFunction {
 	next := l.peek()
 
 	if next == ";" {
+		// move past ';'
 		l.skipOne()
 		return atJmp
 	}
 
-	return endOfCode
+	return endOfInstruction
 }
 
-// Handles the 'j' part of a C-Instruction.
-// Assumes is positioned immediately after the ';'
+func atAInstruct(l *lexer) stateFunction {
+	_ = "breakpoint"
+	// move past '@'
+	l.skipOne()
+
+	l.accept(validSymbol)
+
+	if l.nothingFound() {
+		return errorState
+	}
+
+	l.emit(asmAINSTRUCT)
+
+	return endOfInstruction
+}
+
 func atJmp(l *lexer) stateFunction {
 	l.accept(validInstruction)
 
-	if l.noCapture() {
-		return errState
+	if l.nothingFound() {
+		return errorState
 	}
 
 	l.emit(asmJUMP)
 
-	return endOfCode
+	return endOfInstruction
 }
 
-// Assumes that it's all gone to hell.
-// Emit an error, and moves past the EOL, return skipWhitespace
-// If there is no EOL before EOF, return nil.
-func errState(l *lexer) stateFunction {
-	l.error()
+func atLabel(l *lexer) stateFunction {
+	// move over '('
+	l.skipOne()
+	l.accept(validSymbol)
+	next := l.peek()
 
-	l.moveToEol()
-
-	if l.atEof() {
-		l.emit(asmEOF)
-		return nil
+	if l.nothingFound() || next != ")" {
+		return errorState
 	}
+
+	l.emit(asmLABEL)
+	l.skipOne()
+
+	return endOfInstruction
+}
+
+func endOfInstruction(l *lexer) stateFunction {
+	// remove this state and your code can have multiple instructions
+	// per line, but trying to stick to the 'spec' :-)
+	l.skipWhiteSpace()
+
+	if !l.atEOL() && !l.atEOF() {
+		return errorState
+	}
+
+	return initState
+}
+
+func errorState(l *lexer) stateFunction {
+	l.emit(asmERROR)
+	l.skipToEol()
 
 	return initState
 }
