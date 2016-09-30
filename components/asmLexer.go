@@ -311,7 +311,6 @@ func initState(l *lexer) stateFunction {
 	}
 }
 
-// Assumes we're at the beginning of the CMP part of an instruction.
 func atDest(l *lexer) stateFunction {
 	l.accept(validInstruction)
 	next := l.peek()
@@ -397,7 +396,7 @@ func endOfInstruction(l *lexer) stateFunction {
 	// per line, but trying to stick to the 'spec' :-)
 	l.skipWhiteSpace()
 
-	if !l.atEOL() && !l.atEOF() {
+	if !(l.atEOL() || l.atEOF()) {
 		return errorState
 	}
 

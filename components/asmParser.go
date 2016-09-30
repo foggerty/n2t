@@ -45,8 +45,20 @@ func (p *asmParser) run(f *os.File) errorList {
 
 	var i asm // instruction, reset to 0 after every write
 	var err error
-	var d, c, j asm // dest, comp, jump
+	var d, c, j asm // dest, comp, jump, OR together for final instruction
 	var index = 0
+
+	writeResult := func() {
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		if errs == nil {
+			fmt.Fprintf(f, "%.16b\n", i)
+		}
+
+		i = 0
+	}
 
 Loop:
 	for {
@@ -56,20 +68,11 @@ Loop:
 		switch lex.instruction {
 
 		case asmEOF:
+			writeResult()
 			break Loop
 
 		case asmEOL:
-			if err != nil {
-				errs = append(errs, err)
-			}
-
-			if errs == nil {
-				fmt.Fprintf(f, "%.16b\n", i)
-			}
-
-			i = 0
-
-			// A - Instructions
+			writeResult()
 
 		case asmAINSTRUCT:
 			prev := p.previousInstruction(index)
@@ -83,8 +86,6 @@ Loop:
 		case asmLABEL:
 			index += 2 // skip label and EOL
 			continue
-
-			// C - Instructions
 
 		case asmJUMP:
 			j, err = mapJmp(lex.value)
@@ -199,8 +200,9 @@ func (p *asmParser) buildSymbols() errorList {
 			foundComp = true
 		}
 
-		// just to filter out duplicate EOL tokens
-		if lex.instruction != previous {
+		dupeEol := lex.instruction == asmEOL && previous == asmEOL
+
+		if !dupeEol {
 			p.lexemes = append(p.lexemes, lex)
 		}
 

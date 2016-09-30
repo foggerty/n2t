@@ -23,4 +23,4 @@
    M=D              // M[2] = D (greatest number)
 (INFINITE_LOOP)
    @INFINITE_LOOP
-   0;JMP            // infinite loop
+  0;JMP            // infinite loop
