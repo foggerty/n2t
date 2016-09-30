@@ -105,7 +105,6 @@ Loop:
 	return errs
 }
 
-// 0 1(EOF) 2 3
 func (p *asmParser) previousInstruction(index int) asmLexeme {
 	nil := asmLexeme{instruction: asmNULL}
 
@@ -158,9 +157,10 @@ func (p *asmParser) mapToA(l asmLexeme) (asm, error) {
 }
 
 func (p *asmParser) buildSymbols() errorList {
-	pCount := 0 // instruction memory counter
+	var pCount = 0 // instruction memory counter
 	var errs []error
 	var foundComp bool
+	var previous asmInstruction = asmEOL
 
 	for {
 		lex, ok := <-p.items
@@ -168,9 +168,6 @@ func (p *asmParser) buildSymbols() errorList {
 		if !ok {
 			break
 		}
-
-		// will need these for the second pass
-		p.lexemes = append(p.lexemes, lex)
 
 		switch lex.instruction {
 
@@ -201,6 +198,13 @@ func (p *asmParser) buildSymbols() errorList {
 		case asmCOMP:
 			foundComp = true
 		}
+
+		// just to filter out duplicate EOL tokens
+		if lex.instruction != previous {
+			p.lexemes = append(p.lexemes, lex)
+		}
+
+		previous = lex.instruction
 	}
 
 	return errs

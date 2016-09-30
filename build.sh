@@ -1,5 +1,5 @@
 function run() {
-		if [ $? -eq 0 ]
+		if [[ $? -eq 0 ]]
 		then
 				$1 $2 $3
 		else

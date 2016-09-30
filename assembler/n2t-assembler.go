@@ -53,6 +53,7 @@ func defineParams() {
 }
 
 func setOutput() error {
+
 	if outputFile == "" {
 		out = os.Stdout
 		return nil
