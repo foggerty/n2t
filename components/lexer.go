@@ -13,12 +13,11 @@ type stateFunction func(*lexer) stateFunction
 // Lexer tracks the progress as the lexer process moves through the
 // input string.
 type lexer struct {
-	input    string // entire source file, not bothering with streaming (for now)
-	start    int    // start of current item in bytes, NOT characters
-	pos      int    // the position as we search along/end of current item
-	width    int    // width of last rune that was read
-	lineNum  int    // current source line number
-	instruct bool   // true if we've started processing an instruction
+	input   string // entire source file, not bothering with streaming (for now)
+	start   int    // start of current item in bytes, NOT characters
+	pos     int    // the position as we search along/end of current item
+	width   int    // width of last rune that was read
+	lineNum int    // current source line number
 }
 
 // Requires an initial state function to run.
@@ -50,7 +49,7 @@ func (l *lexer) atEOF() bool {
 	return l.pos >= len(l.input) || l.input == ""
 }
 
-// True id at EOL
+// True if at EOL
 func (l *lexer) atEOL() bool {
 	next := l.peek()
 
