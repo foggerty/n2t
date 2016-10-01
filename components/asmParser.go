@@ -68,6 +68,9 @@ Loop:
 		switch lex.instruction {
 
 		case asmEOF:
+			// In the highly unlikely case the source doesn't end with an
+			// EOL, test for EOF first, so the last instruction isn't
+			// written out twice.
 			writeResult()
 			break Loop
 
