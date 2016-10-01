@@ -113,7 +113,7 @@ func TestTheLot(t *testing.T) {
 		fmt.Println("Running test: " + asmT.name)
 
 		// new lexer
-		items := newLexer(asmT.input)
+		items := kickOff(asmT.input)
 		results := make([]asmLexeme, 0)
 
 		// collect results

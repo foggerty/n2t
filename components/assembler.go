@@ -17,7 +17,7 @@ func Assemble(in string, out *os.File) error {
 	input := string(b)
 
 	// Create a Lexer, it will kick off the lexing in a go routine
-	lexChan := newLexer(input)
+	lexChan := kickOff(input)
 
 	// Create a parser, and hand it the output from the lexer.  It will
 	// run the first pass (building symbol table) and return any errors
