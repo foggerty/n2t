@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-type errorList []error
+type ErrorList []error
 
-func (errs errorList) asError() error {
+func (errs ErrorList) AsError() error {
 	if len(errs) == 0 {
 		return nil
 	}

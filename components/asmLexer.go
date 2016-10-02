@@ -1,3 +1,8 @@
+/*
+ State functions and output channel for the assembler's implementation
+ of the lexer.
+*/
+
 package components
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -11,7 +16,7 @@ const validInstruction string = "-+01!AMD&|nullJGELMNTQEP"
 // Here's where it all goes wrong....
 ////////////////////////////////////////////////////////////////////////////////
 
-func kickOff(input string) chan asmLexeme {
+func StartLexingAsm(input string) chan asmLexeme {
 	out := make(chan asmLexeme)
 
 	lex := newLexer(input)

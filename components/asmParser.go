@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-type asmParser struct {
+type AsmParser struct {
 	items chan asmLexeme
 	symbolTable
 	lexemes []asmLexeme
@@ -16,8 +16,8 @@ type asmParser struct {
 
 const maxConst = 32768 // 2^15
 
-func newParser(input chan asmLexeme) (*asmParser, errorList) {
-	parser := asmParser{
+func NewParser(input chan asmLexeme) (*AsmParser, ErrorList) {
+	parser := AsmParser{
 		items:       input,
 		symbolTable: newSymbolTable(),
 	}
@@ -36,11 +36,11 @@ func newParser(input chan asmLexeme) (*asmParser, errorList) {
 // three parts (d=c;j) per line.  So this isn't really a parser, it
 // just maps instruction mnemonics.
 // Will stop writing to file at the first error.
-func (p *asmParser) run(f *os.File) errorList {
+func (p *AsmParser) Run(f *os.File) ErrorList {
 	var errs []error
 
 	if p.errored {
-		return errorList{errors.New("Cannot parse - errors found by lexer")}
+		return ErrorList{errors.New("Cannot parse - errors found by lexer")}
 	}
 
 	var i asm // instruction, reset to 0 after every write
@@ -109,7 +109,7 @@ Loop:
 	return errs
 }
 
-func (p *asmParser) previousInstruction(index int) asmLexeme {
+func (p *AsmParser) previousInstruction(index int) asmLexeme {
 	nil := asmLexeme{instruction: asmNULL}
 
 	if index-2 < 0 {
@@ -131,7 +131,7 @@ func printInstruction(i asm, err error, f *os.File) {
 	}
 }
 
-func (p *asmParser) mapToA(l asmLexeme) (asm, error) {
+func (p *AsmParser) mapToA(l asmLexeme) (asm, error) {
 	// is it a constant?
 	if c, err := strconv.Atoi(l.value); err == nil {
 		// and is it within the allowed range? (0 - 2^15)
@@ -160,7 +160,7 @@ func (p *asmParser) mapToA(l asmLexeme) (asm, error) {
 	return asm(0), fmt.Errorf("Unrecognised value for A-Instruction: %s", l.value)
 }
 
-func (p *asmParser) buildSymbols() errorList {
+func (p *AsmParser) buildSymbols() ErrorList {
 	var pCount = 0 // instruction memory counter
 	var errs []error
 	var foundComp bool
