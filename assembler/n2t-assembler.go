@@ -18,35 +18,55 @@ var out *os.File
 func main() {
 	defineParams()
 
-	if strings.Trim(inputFile, "") == "" {
-		showHelp()
-		os.Exit(1)
-	}
+	abortIf(
+		func() bool { return strings.Trim(inputFile, "") != "" },
+		func() { showHelp() })
 
-	if err := setOutput(); err != nil {
-		dumpErr("Error setting output.", err)
-		os.Exit(1)
-	}
+	abortIf(
+		func() bool { return checkInput() },
+		func() { fmt.Println("Cannot find input file.") })
 
-	if !checkInput() {
-		os.Exit(1)
-	}
+	abortIfErr(
+		func() error { return setOutput() },
+		"Error setting output.",
+		nil)
 
-	err := Assemble(inputFile, out)
-
-	if err != nil {
-		dumpErr("Error when assembling.", err)
-		deleteOutput()
-		os.Exit(1)
-	}
+	abortIfErr(
+		func() error { return Assemble(inputFile, out) },
+		"Error when assembling.",
+		func() { deleteOutput() })
 
 	out.Sync()
 	out.Close()
 	os.Exit(0)
 }
 
-// Will take a Hack assembler file (.asm) and writes to out, the
-// "binary" machine codes.
+func abortIf(test func() bool, alsoDo func()) {
+	if !test() {
+		if alsoDo != nil {
+			alsoDo()
+		}
+
+		os.Exit(1)
+	}
+}
+
+func abortIfErr(test func() error, msg string, alsoDo func()) {
+	err := test()
+
+	if err != nil {
+		dumpErr(msg, err)
+
+		if alsoDo != nil {
+			alsoDo()
+		}
+
+		os.Exit(1)
+	}
+}
+
+// Assemble will take a Hack assembler file (.asm) and writes to out,
+// the "binary" machine codes.
 func Assemble(in string, out *os.File) error {
 	b, err := ioutil.ReadFile(in)
 
@@ -107,20 +127,13 @@ func setOutput() error {
 	var err error
 	out, err = os.Create(outputFile)
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func checkInput() bool {
-	if _, err := os.Stat(inputFile); err == nil {
-		return true
-	}
+	_, err := os.Stat(inputFile)
 
-	fmt.Println("Cannot find input file.")
-	return false
+	return err == nil
 }
 
 func showHelp() {
@@ -138,10 +151,15 @@ func dumpErr(msg string, err error) {
 
 func deleteOutput() {
 	if out != nil {
-		out.Close()
+		if out.Close() != nil {
+			panic("Something went horribly wrong trying to tidy")
+		}
 	}
 
 	if _, exists := os.Stat(outputFile); !os.IsNotExist(exists) {
+		// Note to self: find out how to flag warnings as "I know what I'm
+		// doing".  The following line will only error with a *PathError,
+		// which the above line has already taken care of.
 		os.Remove(outputFile)
 	}
 }

@@ -164,7 +164,7 @@ func (p *AsmParser) buildSymbols() ErrorList {
 	var pCount = 0 // instruction memory counter
 	var errs []error
 	var foundComp bool
-	var previous asmInstruction = asmEOL
+	var previous = asmEOL
 
 	for {
 		lex, ok := <-p.items
