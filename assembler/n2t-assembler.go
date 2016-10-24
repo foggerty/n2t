@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	. "github.com/foggerty/flib"
 	"github.com/foggerty/n2t/components"
 )
 
@@ -18,20 +19,20 @@ var out *os.File
 func main() {
 	defineParams()
 
-	abortIf(
+	AbortIf(
 		func() bool { return strings.Trim(inputFile, "") != "" },
 		func() { showHelp() })
 
-	abortIf(
+	AbortIf(
 		func() bool { return checkInput() },
 		func() { fmt.Println("Cannot find input file.") })
 
-	abortIfErr(
+	AbortIfErr(
 		func() error { return setOutput() },
 		"Error setting output.",
 		nil)
 
-	abortIfErr(
+	AbortIfErr(
 		func() error { return Assemble(inputFile, out) },
 		"Error when assembling.",
 		func() { deleteOutput() })
@@ -39,30 +40,6 @@ func main() {
 	out.Sync()
 	out.Close()
 	os.Exit(0)
-}
-
-func abortIf(test func() bool, alsoDo func()) {
-	if !test() {
-		if alsoDo != nil {
-			alsoDo()
-		}
-
-		os.Exit(1)
-	}
-}
-
-func abortIfErr(test func() error, msg string, alsoDo func()) {
-	err := test()
-
-	if err != nil {
-		dumpErr(msg, err)
-
-		if alsoDo != nil {
-			alsoDo()
-		}
-
-		os.Exit(1)
-	}
 }
 
 // Assemble will take a Hack assembler file (.asm) and writes to out,
@@ -143,10 +120,6 @@ func showHelp() {
 	flag.PrintDefaults()
 
 	fmt.Println()
-}
-
-func dumpErr(msg string, err error) {
-	fmt.Printf("Something went horribly wrong:\n%s\n%s\n", msg, err.Error())
 }
 
 func deleteOutput() {
