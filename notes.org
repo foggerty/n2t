@@ -9,6 +9,10 @@
 - [X] Check the error handling so far - the components package should NOT call os.Halt() or log.Fatal().  Remember that in Go, errors are values, so just pass them back or collect them and return a wrapped error or anything, really.
 - [X] test error reporting
 - [X] test cleanup of partially written file
+- [X] Get flib onto Github
+- [X] Update parser to only return a channel of string
+- [X] get the parser running in its own go routine
+- [ ] then figure out locking around the error!  Both this routine and anything calling it, need to access the error field of the parser struct.  Feck.
 - [ ] Ensure that the documentation generated for the ~components~ package is showing up in godoc!
 - [ ] Get this org file to export the README section every time it's saved.
 

@@ -5,10 +5,10 @@ import (
 	"strings"
 )
 
-type ErrorList []error
+type errorList []error
 
-func (errs ErrorList) AsError() error {
-	if len(errs) == 0 {
+func (errs errorList) asError() error {
+	if (errs == nil) || len(errs) == 0 {
 		return nil
 	}
 

@@ -7,40 +7,57 @@ import (
 	"strconv"
 )
 
+// AsmParser represents a n2t parser for the assembler.  It takes in a
+// channel of lexemes, and provided they look ok, will then start
+// passing instructions (as strings) back via the output channel.
 type AsmParser struct {
-	items chan asmLexeme
+	items  chan asmLexeme
+	Output chan string
 	symbolTable
 	lexemes []asmLexeme
-	errored bool
+	Error   error
 }
 
 const maxConst = 32768 // 2^15
 
-func NewParser(input chan asmLexeme) (*AsmParser, ErrorList) {
+// NewParser creates a new instance of AsmParser, kicks off the
+// process by running the first pass (to build symbol table) and
+// returns the parser.  Any errors encountered during the first
+// pass will be attached to the Error field.
+func NewParser(input chan asmLexeme) AsmParser {
 	parser := AsmParser{
 		items:       input,
+		Output:      make(chan string),
 		symbolTable: newSymbolTable(),
 	}
 
 	// first pass, building symbol table and recording errors
-	errs := parser.buildSymbols()
-	parser.errored = errs != nil
-	parser.witeMem()
+	parser.buildSymbols()
 
-	return &parser, errs
+	if parser.Error == nil {
+		go parser.run()
+	}
+
+	return parser
 }
 
-// The Lexer is actually doing a lot of error checking, so can assume
-// at this point that, while that may they not be correctly spelled,
-// we're not going to get more than one jmp per line etc, or more than
-// three parts (d=c;j) per line.  So this isn't really a parser, it
-// just maps instruction mnemonics.
-// Will stop writing to file at the first error.
-func (p *AsmParser) Run(f *os.File) ErrorList {
-	var errs []error
+// Run is badly named and is about to be changed.  Note that the Lexer
+// is actually doing a lot of error checking, so can assume at this
+// point that, while that may they not be correctly spelled, we're not
+// going to get more than one jmp per line etc, or more than three
+// parts (d=c;j) per line.  So this isn't really a parser, it just
+// maps instruction mnemonics.
+//
+// At the first error will stop writing to the output channel, but
+// sill continue to parse the rest of the lexemes, so that a full list
+// of errors can still be returned.
+func (p *AsmParser) run() {
+	defer close(p.Output)
 
-	if p.errored {
-		return ErrorList{errors.New("Cannot parse - errors found by lexer")}
+	var errs errorList
+
+	if p.Error != nil {
+		return
 	}
 
 	var i asm // instruction, reset to 0 after every write
@@ -54,7 +71,7 @@ func (p *AsmParser) Run(f *os.File) ErrorList {
 		}
 
 		if errs == nil {
-			fmt.Fprintf(f, "%.16b\n", i)
+			p.Output <- fmt.Sprintf("%.16b", i)
 		}
 
 		i = 0
@@ -68,10 +85,6 @@ Loop:
 		switch lex.instruction {
 
 		case asmEOF:
-			// In the highly unlikely case the source doesn't end with an
-			// EOL, test for EOF first, so the last instruction isn't
-			// written out twice.
-			writeResult()
 			break Loop
 
 		case asmEOL:
@@ -106,7 +119,7 @@ Loop:
 		index++
 	}
 
-	return errs
+	p.Error = errs.asError()
 }
 
 func (p *AsmParser) previousInstruction(index int) asmLexeme {
@@ -123,12 +136,6 @@ func (p *AsmParser) previousInstruction(index int) asmLexeme {
 	}
 
 	return previous
-}
-
-func printInstruction(i asm, err error, f *os.File) {
-	if err == nil {
-		fmt.Fprintf(f, "%.16b\n", i)
-	}
 }
 
 func (p *AsmParser) mapToA(l asmLexeme) (asm, error) {
@@ -160,9 +167,10 @@ func (p *AsmParser) mapToA(l asmLexeme) (asm, error) {
 	return asm(0), fmt.Errorf("Unrecognised value for A-Instruction: %s", l.value)
 }
 
-func (p *AsmParser) buildSymbols() ErrorList {
+// First pass (parse?) - builds the symbol table.
+func (p *AsmParser) buildSymbols() {
 	var pCount = 0 // instruction memory counter
-	var errs []error
+	var errs errorList
 	var foundComp bool
 	var previous = asmEOL
 
@@ -184,8 +192,8 @@ func (p *AsmParser) buildSymbols() ErrorList {
 				foundComp = false
 			}
 
-		case asmEOF:
-			break
+		// case asmEOF:
+		// 	break
 
 		case asmLABEL:
 			p.addLabel(lex.value, asm(pCount))
@@ -212,7 +220,11 @@ func (p *AsmParser) buildSymbols() ErrorList {
 		previous = lex.instruction
 	}
 
-	return errs
+	if len(errs) == 0 {
+		p.witeMem()
+	}
+
+	p.Error = errs.asError()
 }
 
 func mapInstruction(i string, m map[string]asm) (asm, error) {
