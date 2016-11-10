@@ -1,7 +1,6 @@
 package components
 
 import "testing"
-import "fmt"
 
 // Note to self: defining (an anonymous?) type and creating a literal
 // instance of it at the same time.
@@ -110,7 +109,6 @@ var asmTest = []struct {
 
 func TestTheLot(t *testing.T) {
 	for _, asmT := range asmTest {
-		fmt.Println("Running test: " + asmT.name)
 
 		// new lexer
 		items := StartLexingAsm(asmT.input)

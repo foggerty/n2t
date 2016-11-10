@@ -1,9 +1,6 @@
 package components
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 const mismatchLength = "Mismatched results (%s).  Expected %d instructions, got %d."
 const mismatchInstruction = "Mismatched instruction (%s).  Expected %s, got %s."
@@ -31,8 +28,6 @@ var tests = []parseTest{
 
 func Test(t *testing.T) {
 	for _, tst := range tests {
-		fmt.Printf("Testing: %s\n", tst.name)
-
 		c := newChannel(tst.instructions)
 		p := NewParser(c)
 		results := collectResults(p)

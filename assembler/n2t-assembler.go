@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
 	. "github.com/foggerty/flib"
@@ -83,19 +82,6 @@ func setOutput() error {
 	if outputFile == "" {
 		out = os.Stdout
 		return nil
-	}
-
-	ext := filepath.Ext(outputFile)
-
-	switch ext {
-	case ".hack":
-		break
-	case "":
-		outputFile += ".hack"
-	default:
-		var i int
-		i = len(outputFile) - len(ext)
-		outputFile = outputFile[:i] + ".hack"
 	}
 
 	var err error

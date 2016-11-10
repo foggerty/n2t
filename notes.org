@@ -12,8 +12,14 @@
 - [X] Get flib onto Github
 - [X] Update parser to only return a channel of string
 - [X] get the parser running in its own go routine
-- [ ] then figure out locking around the error!  Both this routine and anything calling it, need to access the error field of the parser struct.  Feck.
-- [ ] Ensure that the documentation generated for the ~components~ package is showing up in godoc!
+- [ ] take notes on the built-in profiling / benchmarking
+- [X] performance - write parser tests/benchmarks
+- [ ] performance - get a profile
+- [ ] Ask the N2T folks re copyright - is it ok for me to include the Pong.asm file (including original attribution) in my repository?
+- [ ] performance - try streaming the input file instead of reading all at once (more pipelining).  Can I benchmark this?  I means having a 'unit' test that relies on an external file.  Meh, why not?  Check with N2T folks first.
+- [ ] then figure out locking around the error!  Both this routine and anything calling it, need to access the error field of the parser struct.  Feck.  Will need a method to return the error instead of accessing it directly.
+- [ ] performance - ask on StackExchange if closures are the best way to handle the generics work around with state functions
+- [ ] write some error tests, pretty sure I haven't thought of all edge cases yet
 - [ ] Get this org file to export the README section every time it's saved.
 
 * Readme
