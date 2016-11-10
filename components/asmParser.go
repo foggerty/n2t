@@ -80,8 +80,7 @@ func (p *AsmParser) run() {
 
 		switch lex.instruction {
 
-		// Possible to get EOF without a preceding EOL.
-		// (Unlikely edge case, but may as well.)
+		// possible edge case, hitting EOF before an EOL
 		case asmEOF:
 			fallthrough
 
@@ -102,6 +101,7 @@ func (p *AsmParser) run() {
 			i, err = p.mapToA(lex)
 
 		case asmLABEL:
+			index += 2 // skip label and EOL
 			continue
 
 		case asmJUMP:
@@ -116,6 +116,8 @@ func (p *AsmParser) run() {
 			d, err = mapDest(lex.value)
 			i = i | d
 		}
+
+		index++
 	}
 
 	p.Error = errs.asError()
