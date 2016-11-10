@@ -63,7 +63,6 @@ func (p *AsmParser) run() {
 	var i asm // instruction, reset to 0 after every write
 	var err error
 	var d, c, j asm // dest, comp, jump, OR together for final instruction
-	var index = 0
 
 	writeResult := func() {
 		if err != nil {
@@ -77,18 +76,21 @@ func (p *AsmParser) run() {
 		i = 0
 	}
 
-Loop:
-	for {
-
-		lex := p.lexemes[index]
+	for index, lex := range p.lexemes {
 
 		switch lex.instruction {
 
+		// Possible to get EOF without a preceding EOL.
+		// (Unlikely edge case, but may as well.)
 		case asmEOF:
-			break Loop
+			fallthrough
 
 		case asmEOL:
-			writeResult()
+			prev := p.previousInstruction(index)
+
+			if prev.instruction != asmLABEL {
+				writeResult()
+			}
 
 		case asmAINSTRUCT:
 			prev := p.previousInstruction(index)
@@ -100,7 +102,6 @@ Loop:
 			i, err = p.mapToA(lex)
 
 		case asmLABEL:
-			index += 2 // skip label and EOL
 			continue
 
 		case asmJUMP:
@@ -115,8 +116,6 @@ Loop:
 			d, err = mapDest(lex.value)
 			i = i | d
 		}
-
-		index++
 	}
 
 	p.Error = errs.asError()
