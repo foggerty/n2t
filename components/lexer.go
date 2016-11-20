@@ -13,6 +13,7 @@ type stateFunction func(*lexer) stateFunction
 // Lexer tracks the progress as the lexer process moves through the
 // input string.
 type lexer struct {
+	output  []asmLexeme
 	input   string // entire source file, not bothering with streaming (for now)
 	start   int    // start of current item in bytes, NOT characters
 	pos     int    // the position as we search along/end of current item
@@ -32,11 +33,9 @@ func newLexer(input string) *lexer {
 func (l *lexer) Run(init stateFunction) {
 	state := init
 
-	go func() {
-		for state != nil {
-			state = state(l)
-		}
-	}()
+	for state != nil {
+		state = state(l)
+	}
 }
 
 // Returns the current token.

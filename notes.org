@@ -12,8 +12,10 @@
 - [X] Get flib onto Github
 - [X] Update parser to only return a channel of string
 - [X] get the parser running in its own go routine
-- [ ] take notes on the built-in profiling / benchmarking
 - [X] performance - write parser tests/benchmarks
+- [ ] take notes on the built-in profiling / benchmarking
+- [ ] try out the -race flag, take a few notes on it
+- [ ] see if getting rid of the global lag vars at the app level makes things cleaner
 - [ ] performance - get a profile
 - [ ] Ask the N2T folks re copyright - is it ok for me to include the Pong.asm file (including original attribution) in my repository?
 - [ ] performance - try streaming the input file instead of reading all at once (more pipelining).  Can I benchmark this?  I means having a 'unit' test that relies on an external file.  Meh, why not?  Check with N2T folks first.

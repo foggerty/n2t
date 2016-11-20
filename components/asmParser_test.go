@@ -28,28 +28,14 @@ var tests = []parseTest{
 
 func Test(t *testing.T) {
 	for _, tst := range tests {
-		c := newChannel(tst.instructions)
-		p := NewParser(c)
-		results := collectResults(p)
+		results, err := Parse(tst.instructions)
+
+		if err != nil {
+			t.Error(err)
+		}
 
 		compare(t, tst, results)
 	}
-}
-
-func collectResults(p AsmParser) []string {
-	var results []string
-
-	for {
-		asm, ok := <-p.Output
-
-		if !ok {
-			break
-		}
-
-		results = append(results, asm)
-	}
-
-	return results
 }
 
 func compare(t *testing.T, pt parseTest, results []string) {

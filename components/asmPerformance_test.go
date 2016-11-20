@@ -30,14 +30,5 @@ func run() {
 
 	// create a lexer/parser
 	lexes := StartLexingAsm(string(in))
-	parser := NewParser(lexes)
-
-	// read off and dump the output
-	for {
-		_, ok := <-parser.Output
-
-		if !ok {
-			break
-		}
-	}
+	Parse(lexes)
 }

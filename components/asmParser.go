@@ -10,9 +10,9 @@ import (
 // AsmParser represents a n2t parser for the assembler.  It takes in a
 // channel of lexemes, and provided they look ok, will then start
 // passing instructions (as strings) back via the output channel.
-type AsmParser struct {
-	items  chan asmLexeme
-	Output chan string
+type asmParser struct {
+	items  []asmLexeme
+	output []string
 	symbolTable
 	lexemes []asmLexeme
 	Error   error
@@ -24,10 +24,9 @@ const maxConst = 32768 // 2^15
 // process by running the first pass (to build symbol table) and
 // returns the parser.  Any errors encountered during the first
 // pass will be attached to the Error field.
-func NewParser(input chan asmLexeme) AsmParser {
-	parser := AsmParser{
+func Parse(input []asmLexeme) ([]string, error) {
+	parser := asmParser{
 		items:       input,
-		Output:      make(chan string),
 		symbolTable: newSymbolTable(),
 	}
 
@@ -35,10 +34,10 @@ func NewParser(input chan asmLexeme) AsmParser {
 	parser.buildSymbols()
 
 	if parser.Error == nil {
-		go parser.run()
+		parser.run()
 	}
 
-	return parser
+	return parser.output, parser.Error
 }
 
 // Run is badly named and is about to be changed.  Note that the Lexer
@@ -51,9 +50,7 @@ func NewParser(input chan asmLexeme) AsmParser {
 // At the first error will stop writing to the output channel, but
 // sill continue to parse the rest of the lexemes, so that a full list
 // of errors can still be returned.
-func (p *AsmParser) run() {
-	defer close(p.Output)
-
+func (p *asmParser) run() {
 	var errs errorList
 
 	if p.Error != nil {
@@ -70,7 +67,7 @@ func (p *AsmParser) run() {
 		}
 
 		if errs == nil {
-			p.Output <- fmt.Sprintf("%.16b", i)
+			p.output = append(p.output, fmt.Sprintf("%.16b", i))
 		}
 
 		i = 0
@@ -123,7 +120,7 @@ func (p *AsmParser) run() {
 	p.Error = errs.asError()
 }
 
-func (p *AsmParser) previousInstruction(index int) asmLexeme {
+func (p *asmParser) previousInstruction(index int) asmLexeme {
 	nil := asmLexeme{instruction: asmNULL}
 
 	if index-2 < 0 {
@@ -139,7 +136,7 @@ func (p *AsmParser) previousInstruction(index int) asmLexeme {
 	return previous
 }
 
-func (p *AsmParser) mapToA(l asmLexeme) (asm, error) {
+func (p *asmParser) mapToA(l asmLexeme) (asm, error) {
 	// is it a constant?
 	if c, err := strconv.Atoi(l.value); err == nil {
 		// and is it within the allowed range? (0 - 2^15)
@@ -169,19 +166,13 @@ func (p *AsmParser) mapToA(l asmLexeme) (asm, error) {
 }
 
 // First pass (parse?) - builds the symbol table.
-func (p *AsmParser) buildSymbols() {
+func (p *asmParser) buildSymbols() {
 	var pCount = 0 // instruction memory counter
 	var errs errorList
 	var foundComp bool
 	var previous = asmEOL
 
-	for {
-		lex, ok := <-p.items
-
-		if !ok {
-			break
-		}
-
+	for _, lex := range p.items {
 		switch lex.instruction {
 
 		case asmERROR:

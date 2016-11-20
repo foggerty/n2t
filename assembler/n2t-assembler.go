@@ -51,22 +51,18 @@ func Assemble(in string, out *os.File) error {
 	}
 
 	input := string(b)
-	lexChan := components.StartLexingAsm(input)
-	parser := components.NewParser(lexChan)
+	lexes := components.StartLexingAsm(input)
+	output, error := components.Parse(lexes)
 
-	if parser.Error != nil {
-		return parser.Error
+	if error != nil {
+		return error
 	}
 
-	for {
-		asm, ok := <-parser.Output
-
-		if !ok {
-			return parser.Error
-		}
-
+	for _, asm := range output {
 		fmt.Fprintln(out, asm)
 	}
+
+	return nil
 }
 
 func defineParams() {

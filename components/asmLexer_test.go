@@ -110,12 +110,13 @@ var asmTest = []struct {
 func TestTheLot(t *testing.T) {
 	for _, asmT := range asmTest {
 
+		var results []asmLexeme
+
 		// new lexer
 		items := StartLexingAsm(asmT.input)
-		results := make([]asmLexeme, 0)
 
 		// collect results
-		for res := range items {
+		for _, res := range items {
 			results = append(results, res)
 		}
 
