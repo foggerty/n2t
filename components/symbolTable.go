@@ -1,10 +1,5 @@
 package components
 
-import (
-	"errors"
-	"fmt"
-)
-
 /*
 
  Note to self: everything here is passed by value.  But remember, that
@@ -46,7 +41,7 @@ func newSymbolTable() symbolTable {
 // writing a flag value for all variables, in case they turn out to be
 // labels.  Easier than updating them as we go and then reshuffling
 // the variable locations.
-func (st *symbolTable) witeMem() {
+func (st *symbolTable) writeMem() {
 	mem := 16
 
 	for k, v := range st.symbols {
@@ -73,16 +68,15 @@ func (st *symbolTable) addVariable(s string) {
 	}
 }
 
-func (st *symbolTable) symbolValue(s string) (asm, error) {
+// Will return 0 if there is no matching symbol.
+func (st *symbolTable) symbolValue(s string) asm {
 	if !st.initialised {
-		return 0, errors.New("DEVELOPER ERROR - you need to call writeMem() before calling symbolValue().")
+		panic("DEVELOPER ERROR - you need to call writeMem() before calling symbolValue().")
 	}
 
 	if res, ok := st.symbols[s]; ok {
-		return asm(res), nil
+		return asm(res)
 	}
 
-	msg := fmt.Sprintf("Internal error - %s not found in the lookup table.", s)
-
-	return asm(0), errors.New(msg)
+	return asm(0)
 }

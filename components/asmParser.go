@@ -151,7 +151,7 @@ func (p *AsmParser) mapToA(l asmLexeme) (asm, error) {
 	}
 
 	// does the value exist in the symbol table?
-	if sym, err := p.symbolValue(l.value); err == nil {
+	if sym := p.symbolValue(l.value); sym != asm(0) {
 		return aInst | sym, nil
 	}
 
@@ -222,7 +222,7 @@ func (p *AsmParser) buildSymbols() {
 	}
 
 	if len(errs) == 0 {
-		p.witeMem()
+		p.writeMem()
 	}
 
 	p.Error = errs.asError()
