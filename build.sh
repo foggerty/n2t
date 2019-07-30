@@ -6,7 +6,7 @@ echo Building:
 go build -v ./...
 
 echo Vet:
-go tool vet -shadow ./
+go vet ./...
 
 echo Test:
 go test ./...
@@ -14,8 +14,8 @@ go test ./...
 echo Install:
 go install ./...
 
+echo Running comparison test:
+~/go/bin/assembler -in ./Pong.asm -out test.hack
+diff -y --suppress-common-lines test.hack Pong-Reference.hack 
+
 popd
-
-
-
-		
