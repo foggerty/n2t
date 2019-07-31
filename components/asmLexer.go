@@ -17,44 +17,12 @@ const validInstruction string = "-+01!AMD&|nullJGELMNTQEP"
 ////////////////////////////////////////////////////////////////////////////////
 
 func StartLexingAsm(input string) chan asmLexeme {
-	out := make(chan asmLexeme)
 
 	lex := newLexer(input)
 
-	lex.Run(initState(out))
+	lex.Run(initState)
 
-	return out
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// function used by ASM lexer to map current token.
-////////////////////////////////////////////////////////////////////////////////
-
-func emit(l *lexer, i asmInstruction, c chan asmLexeme) {
-	var value string
-
-	switch i {
-	case asmEOL:
-		fallthrough
-	case asmEOF:
-		value = ""
-	case asmERROR:
-		value = l.currentLine()
-	default:
-		value = l.value()
-	}
-
-	lex := asmLexeme{
-		lineNum:     l.lineNum,
-		instruction: i,
-		value:       value,
-	}
-
-	c <- lex
-
-	if i == asmEOL {
-		l.lineNum++
-	}
+	return lex.output
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -63,166 +31,142 @@ func emit(l *lexer, i asmInstruction, c chan asmLexeme) {
 
 // Skips leading white space, comments and newlines until we reach what is
 // hopefully code.
-func initState(c chan asmLexeme) stateFunction {
+func initState(l* lexer) stateFunction {
 
-	return func(l *lexer) stateFunction {
-		l.skipWhiteSpace()
+	l.skipWhiteSpace()
 
-		if l.atEOF() {
-			emit(l, asmEOF, c)
-			close(c)
-			return nil
-		}
-
-		if l.atEOL() {
-			emit(l, asmEOL, c)
-			l.skipEol()
-			return initState(c)
-		}
-
-		// determine what we're looking at
-		next := l.nextInstance("=;(@")
-
-		switch next {
-		case "=":
-			// instruction has a DEST part
-			return atDest(c)
-		case ";":
-			// only COMP & JMP
-			return atComp(c)
-		case "(":
-			// at a label
-			return atLabel(c)
-		case "@":
-			return atAInstruct(c)
-		default:
-			// anything else must be an error
-			return errorState(c)
-		}
+	if l.atEOF() {
+		l.emit(asmEOF)
+		close(l.output)
+		return nil
 	}
 
+	if l.atEOL() {
+		l.emit(asmEOL)
+		l.skipEol()
+		return initState(l)
+	}
+
+	// determine what we're looking at
+	next := l.nextInstance("=;(@")
+
+	switch next {
+	case "=":
+		// instruction has a DEST part
+		return atDest(l)
+	case ";":
+		// only COMP & JMP
+		return atComp(l)
+	case "(":
+		// at a label
+		return atLabel(l)
+	case "@":
+		return atAInstruct(l)
+	default:
+		// anything else must be an error
+		return errorState(l)
+	}
 }
 
-func atDest(c chan asmLexeme) stateFunction {
+func atDest(l* lexer) stateFunction {
 
-	return func(l *lexer) stateFunction {
-		l.accept(validInstruction)
-		next := l.peek()
+	l.accept(validInstruction)
+	next := l.peek()
 
-		if l.nothingFound() || next != "=" {
-			return errorState(c)
-		}
+	if l.nothingFound() || next != "=" {
+		return errorState(l)
+	}
 
-		emit(l, asmDEST, c)
+	l.emit(asmDEST)
 
-		// move past '='
+	// move past '='
+	l.skipOne()
+
+	return atComp(l)
+}
+
+func atComp(l* lexer) stateFunction {
+
+	l.accept(validInstruction)
+
+	if l.nothingFound() {
+		return errorState(l)
+	}
+
+	l.emit(asmCOMP)
+
+	next := l.peek()
+
+	if next == ";" {
+		// move past ';'
 		l.skipOne()
-
-		return atComp(c)
+		return atJmp(l)
 	}
 
+	return endOfInstruction(l)
 }
 
-func atComp(c chan asmLexeme) stateFunction {
+func atAInstruct(l* lexer) stateFunction {
 
-	return func(l *lexer) stateFunction {
-		l.accept(validInstruction)
+	// move past '@'
+	l.skipOne()
 
-		if l.nothingFound() {
-			return errorState(c)
-		}
+	l.accept(validSymbol)
 
-		emit(l, asmCOMP, c)
-
-		next := l.peek()
-
-		if next == ";" {
-			// move past ';'
-			l.skipOne()
-			return atJmp(c)
-		}
-
-		return endOfInstruction(c)
+	if l.nothingFound() {
+		return errorState(l)
 	}
 
+	l.emit(asmAINSTRUCT)
+
+	return endOfInstruction(l)
 }
 
-func atAInstruct(c chan asmLexeme) stateFunction {
+func atJmp(l* lexer) stateFunction {
 
-	return func(l *lexer) stateFunction {
-		// move past '@'
-		l.skipOne()
+	l.accept(validInstruction)
 
-		l.accept(validSymbol)
-
-		if l.nothingFound() {
-			return errorState(c)
-		}
-
-		emit(l, asmAINSTRUCT, c)
-
-		return endOfInstruction(c)
+	if l.nothingFound() {
+		return errorState(l)
 	}
 
+	l.emit(asmJUMP)
+
+	return endOfInstruction(l)
 }
 
-func atJmp(c chan asmLexeme) stateFunction {
+func atLabel(l* lexer) stateFunction {
 
-	return func(l *lexer) stateFunction {
-		l.accept(validInstruction)
+	// move over '('
+	l.skipOne()
+	l.accept(validSymbol)
+	next := l.peek()
 
-		if l.nothingFound() {
-			return errorState(c)
-		}
-
-		emit(l, asmJUMP, c)
-
-		return endOfInstruction(c)
+	if l.nothingFound() || next != ")" {
+		return errorState(l)
 	}
 
+	l.emit(asmLABEL)
+	l.skipOne()
+
+	return endOfInstruction(l)
 }
 
-func atLabel(c chan asmLexeme) stateFunction {
+func endOfInstruction(l* lexer) stateFunction {
 
-	return func(l *lexer) stateFunction {
-		// move over '('
-		l.skipOne()
-		l.accept(validSymbol)
-		next := l.peek()
+	l.skipWhiteSpace()
 
-		if l.nothingFound() || next != ")" {
-			return errorState(c)
-		}
-
-		emit(l, asmLABEL, c)
-		l.skipOne()
-
-		return endOfInstruction(c)
+	if !(l.atEOL() || l.atEOF()) {
+		return errorState(l)
 	}
 
+	return initState(l)
 }
 
-func endOfInstruction(c chan asmLexeme) stateFunction {
+func errorState(l* lexer) stateFunction {
 
-	return func(l *lexer) stateFunction {
-		l.skipWhiteSpace()
+	l.emit(asmERROR)
+	l.skipToEol()
 
-		if !(l.atEOL() || l.atEOF()) {
-			return errorState(c)
-		}
-
-		return initState(c)
-	}
-
-}
-
-func errorState(c chan asmLexeme) stateFunction {
-
-	return func(l *lexer) stateFunction {
-		emit(l, asmERROR, c)
-		l.skipToEol()
-
-		return initState(c)
-	}
-
+	return initState(l)
 }

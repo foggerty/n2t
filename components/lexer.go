@@ -18,6 +18,7 @@ type lexer struct {
 	pos     int    // the position as we search along/end of current item
 	width   int    // width of last rune that was read
 	lineNum int    // current source line number
+	output chan asmLexeme
 }
 
 // Requires an initial state function to run.
@@ -25,18 +26,46 @@ func newLexer(input string) *lexer {
 	return &lexer{
 		input:   input,
 		lineNum: 1,
+		output: make(chan asmLexeme),
 	}
 }
 
 // Kick off the lexing process.
 func (l *lexer) Run(init stateFunction) {
-	state := init
-
 	go func() {
+		state := init(l)
+		
 		for state != nil {
 			state = state(l)
 		}
 	}()
+}
+
+func (l* lexer) emit(i asmInstruction) {
+	var value string
+
+	switch i {
+	case asmEOL:
+		fallthrough
+	case asmEOF:
+		value = ""
+	case asmERROR:
+		value = l.currentLine()
+	default:
+		value = l.value()
+	}
+
+	lex := asmLexeme{
+		lineNum:     l.lineNum,
+		instruction: i,
+		value:       value,
+	}
+
+	l.output <- lex
+
+	if i == asmEOL {
+		l.lineNum++
+	}
 }
 
 // Returns the current token.

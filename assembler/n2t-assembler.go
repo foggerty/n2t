@@ -50,9 +50,9 @@ func Assemble(in string, out *os.File) error {
 		return err
 	}
 
-	input := string(b)
-	lexChan := components.StartLexingAsm(input)
-	parser := components.NewParser(lexChan)
+	input		:= string(b)
+	lexChan	:= components.StartLexingAsm(input)
+	parser	:= components.NewParser(lexChan)
 
 	if parser.Error != nil {
 		return parser.Error

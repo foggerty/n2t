@@ -25,6 +25,7 @@ const maxConst = 32768 // 2^15
 // returns the parser.  Any errors encountered during the first
 // pass will be attached to the Error field.
 func NewParser(input chan asmLexeme) AsmParser {
+
 	parser := AsmParser{
 		items:       input,
 		Output:      make(chan string),
