@@ -209,6 +209,7 @@ func (p *AsmParser) buildSymbols() {
 
 		case asmDEST:
 			fallthrough
+
 		case asmCOMP:
 			foundComp = true
 		}

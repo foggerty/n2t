@@ -1,29 +1,5 @@
 package components
 
-/*
-
- Note to self: everything here is passed by value.  But remember, that
- a map is a reference type, in that it's a small strut, part of which
- is a pointer back to a much larger data structure.  i.e. while the
- struct is always copied by value, it's values happen to be two
- automatically dereferenced pointers.
-
- Since SymbolTable is just two reference types (i.e. small struct with
- a pointer somewhere), there's not much point in making all of these
- methods work again pointers.  This includes the 'addToMap' and
- 'getValue' functions.
-
- Also note that if AddLabel was to be written like so:
-
-   func (st *SymbolTable) AddLabel(...
-
- everything still works as is, because when using the '.' operator
- against a pointer to a struct, the pointer is automatically
- dereferenced for you.  i.e, no need for a second '->' operator as in
- C.
-
-*/
-
 // HACK - internally stored as ints so I can use -1 as a flag value.
 type symbolTable struct {
 	symbols     map[string]int
