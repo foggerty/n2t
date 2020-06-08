@@ -10,6 +10,8 @@ It's totally overkill for the assembler, (which is really just an exercise in su
 
 *Postscript:* It turns out that I'm a masochist.  This WAS a good way to learn a new language, but maybe next time don't also learn how to write something like a lexer (which I'm still not happy about, it doesn't feel 'clean' in the same way that the parser does) at the same time too.
 
+*Postscript #2:* I'll be writing the compiler in Clojure, so no code to reuse from the assembler.  I've updated it as a result, removing the closure 'hack' I was using to get around the lack of generics in Go.
+
 ## Assembler
 
 Basic assembler that maps symbols/tokens to machine instructions.  Output is a text file with "binary" values written out as string.  Internally they're all going to be represented by 16 bit constants that are then OR'd together and converted to a string representation at the end.  This is because it sounds more 'program-y' but mainly because I cannot bring myself to write this using string concatenation (plus it's good practice as I'm learning Go at the same time).
@@ -20,4 +22,8 @@ Still to do - tidy up Lexer, and in fact make it dumber.  Right now it's doing a
 
 ## Compiler
 
-TBD
+Annnnnnd back on this project after 3-4 years (other than a bit of tinkering with the assembler).  The compiler is (going to be) written in Clojure, because again, real-world projects are the best way to learn a new language.  Just don't expect it to be that pretty :-)
+
+Thanks COVID-19 for terminating my contract early!  Taking a month off to finish this course.
+
+This is so much more enjoyable than writing yet another bloody API in .NET, sigh.
