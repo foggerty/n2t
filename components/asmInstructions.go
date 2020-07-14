@@ -11,7 +11,7 @@ const cInst asm = 7 << 13
 const aInst asm = 0
 
 ////////////////////////////////////////////////////////////////////////////////
-// Register constants
+// Register constants - these are all RAM addresses.
 
 var registers = map[string]asm{
 	"R0":  0,
