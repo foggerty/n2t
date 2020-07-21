@@ -1,44 +1,23 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Maps VM string tokens to keywords.
+;;;; All of the VM commands put into collections to make lookups easier.
 
-(def vm-tokems
-  "Maps VM string tokens to keywords."
-  {;; Arithmetic and logic
-   "add"       :add
-   "sub"       :sub
-   "neg"       :neg
-   "eq"        :eq
-   "gt"        :gt
-   "lt"        :lt
-   "and"       :and
-   "or"        :or
-   "not"       :not
+(ns n2t.vm
+  (:require [clojure.set :as set]))
 
-   ;; Memory
-   "push"      :push
-   "pop"       :pop
-
-   ;; Control flow
-   "label"     :label
-   "goto"      :goto
-   "if-goto"   :if-goto
-
-   ;; Function calling
-   "function"  :function
-   "call"      :call
-   "return"    :return})
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Organise into collections to make parsing easier
-
-(def vm-arithmetic-cmds
+(def vm-cmds-arithmetic
   #{:add :sub :neg :eq :gt :lt :and :or :not})
 
-(def vm-memory-cmds
+(def vm-cmds-memory
   #{:push :pop})
 
-(def vm-control-cmds
+(def vm-cmds-control
   #{:label :goto :if-goto})
 
-(def vm-function-cmds
+(def vm-cmds-function
   #{:function :call :return})
+
+(def vm-cmds-all
+  (set/intersection vm-cmds-arithmetic
+                    vm-cmds-control
+                    vm-cmds-function
+                    vm-cmds-memory))
