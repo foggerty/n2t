@@ -1,9 +1,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Memory management and segment  definitions.
 
+(ns n2t.memory
+  (:require [clojure.set :as set]))
+
 (def registers
   "Registers (defined by the assembler) that the VM can access."
-  #{:sp :lcl :arg :this :that :R13: :R14 :R15})
+  #{:sp :lcl :arg :this :that :R13 :R14 :R15})
 
 (def register-addresses
   {:sp   0
@@ -18,8 +21,7 @@
 
 (def segment-address
   "Maps segment to memory address."
-  {:stack 16 ; not actually used, implicitly handled by assembler
-   :stack 256
+  {:stack 256
    :heap  2048})
 
 (def temp

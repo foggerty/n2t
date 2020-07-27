@@ -4,7 +4,8 @@
 ;;;; instructions.
 
 (ns n2t.lexer
-  (:require [n2t.vm :refer :all]
+  (:require [n2t.commands :refer :all]
+            [n2t.memory :refer :all]
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
