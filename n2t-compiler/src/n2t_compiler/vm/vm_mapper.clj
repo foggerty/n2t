@@ -30,62 +30,56 @@
 (def commands
   "A collection of VM commands, and the associated assembly instructions
   that should be emitted.  Note that there are placeholders for some
-  g  commands.
+  commands.
 
   Some assumptions are made for all commands:
 
   All binary arithmetic operations expect that the two values are
   already in D & {{temp}}, where {{temp}} is R5-R12.
 
-  All unary arithmetic operations expect the value to already be in D.
+  All arithmetic commands will leave the result in D."
+  {:inc-sp            ["// Inc sp"
+                       "@SP"
+                       "M=M+1"]
 
-  All arithmetic commands will leave the result in D.
+   :dec-sp            ["// Dec sp"
+                       "@SP"
+                       "M=M-1"]
 
-  All operations that push to the stack
+   :stack-to-D        ["// Copy stack to d"
+                       "@SP"
+                       "A=M"
+                       "D=M"]
 
-  Any arithmetic operations "
-  {:inc-sp ["// INC SP"
-            "@SP"
-            "M=M+1"]
+   :stack-to-tmp      ["// Copy stack to @{{temp}"
+                       "@SP"
+                       "A=M"
+                       "D=M"
+                       "@{{temp}}"
+                       "M=D"]
 
-   :dec-sp ["// DEC SP"
-            "@SP"
-            "M=M-1"]
+   :D-to-stack        ["// Copy D to stack"
+                       "@SP"
+                       "A=M"
+                       "M=D"]
 
-   :stack-to-D ["// COPY STACK TO D"
-                "@SP"
-                "A=M"
-                "D=M"]
+   :tmp-to-stack      ["// Copy R{{temp}} to stack"
+                       "@{{temp}}"
+                       "D=M"
+                       "@SP"
+                       "A=M"
+                       "M=D"]
 
-   :stack-to-tmp ["// COPY STACK TO @{{temp}"
-                  "@SP"
-                  "A=M"
-                  "D=M"
-                  "@{{temp}}"
-                  "M=D"]
-
-   :D-to-stack ["// COPY D TO STACK"
-                "@SP"
-                "A=M"
-                "M=D"]
-
-   :tmp-to-stack ["// COPY R{{temp}} TO STACK"
-                  "@{{temp}}"
-                  "D=M"
-                  "@SP"
-                  "A=M"
-                  "M=D"]
-
-   :constant-to-stack ["// PUSH CONSTANT {{constant}}"
+   :constant-to-stack ["// push constant {{constant}}"
                        "@{{constant}}"
                        "D=A"
                        "@SP"
                        "A=M"
                        "M=D"]
 
-   :add ["// ADD"
-         "@{{temp}}"
-         "D=D+M"]})
+   :add               ["// add"
+                       "@{{temp}}"
+                       "D=D+M"]})
 
 (defn arithmetic-dispatch [cmd]
   "Dispatch to the correct function based on arity."
@@ -157,4 +151,6 @@
 
 (defn tokens-to-asm [tokens]
   "It all seems so simple when viewed from here..."
-  (mapcat map-token tokens))
+  (mapcat #(let [src (str "// VM INSTRUCTION: " (str/upper-case (:source %)))]
+             (conj (map-token %) src))
+          tokens))

@@ -22,8 +22,9 @@
 
 (defn make-tokens [src]
   "For line in src, returns a map containing :cmd, :arg1 & :arg2."
-  (map #(zipmap [:cmd :arg1 :arg2]
-                (str/split % #"\s"))
+  (map #(assoc (zipmap [:cmd :arg1 :arg2]
+                       (str/split % #"\s"))
+               :source %)
        src))
 
 (defn map-cmd [token]
@@ -31,7 +32,7 @@
   (let [cmd (keyword (:cmd token))]
     (if (contains? vm-cmds-all cmd)
       (assoc token :cmd cmd)
-      (throw (Exception. "Invalid token name, learn how string interpolation works in Clojure.")))))
+      (throw (Exception. "Invalid token name.  Note to self: look up string interpolation in Clojure.")))))
 
 (defn map-arg1 [token]
   "Repalce :arg1 with a keyword, if a matching one can be found (could
